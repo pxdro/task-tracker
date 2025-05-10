@@ -12,10 +12,10 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["TaskTracker.Api.csproj", "."]
-RUN dotnet restore "./TaskTracker.Api.csproj"
+COPY ["TaskTracker.Api/TaskTracker.Api.csproj", "TaskTracker.Api/"]
+RUN dotnet restore "./TaskTracker.Api/TaskTracker.Api.csproj"
 COPY . .
-WORKDIR "/src/."
+WORKDIR "/src/TaskTracker.Api"
 RUN dotnet build "./TaskTracker.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Esta fase é usada para publicar o projeto de serviço a ser copiado para a fase final
