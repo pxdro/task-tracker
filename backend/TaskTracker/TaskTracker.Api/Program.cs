@@ -1,3 +1,7 @@
+using TaskTracker.Domain.DTOs;
+using TaskTracker.Domain.Interfaces;
+using TaskTracker.Infrastructure.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<IUserService, UserService>();
 
 var app = builder.Build();
 
@@ -19,6 +24,25 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapPost("/api/auth/register", async (RegisterDto dto, IUserService userService, HttpContext context) =>
+{
+    var success = await userService.RegisterAsync(dto);
+
+    if (!success)
+    {
+        context.Response.StatusCode = StatusCodes.Status409Conflict;
+        await context.Response.WriteAsJsonAsync(new { message = "Email already registered" });
+    }
+    else
+    {
+        context.Response.Headers.Append("X-Confirmation-Sent", "true");
+        context.Response.StatusCode = StatusCodes.Status201Created;
+        await context.Response.WriteAsJsonAsync(new { message = "Email registered successfully" });
+    }
+});
+
+app.MapPost("/test", () => "ok");
 
 app.Run();
 
