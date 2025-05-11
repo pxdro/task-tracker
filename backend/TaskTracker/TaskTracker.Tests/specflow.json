@@ -1,0 +1,15 @@
+{
+  "bindingCulture": {
+    "language": "en-us"
+  },
+  "language": {
+    "feature": "en"
+  },
+  "unitTestProvider": {
+    "name": "xUnit"
+  },
+  "generator": {
+    "allowDebugGeneratedFiles": true,
+    "generateAsyncTests": true
+  }
+}
