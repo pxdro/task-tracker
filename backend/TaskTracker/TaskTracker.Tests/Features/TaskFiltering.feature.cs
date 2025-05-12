@@ -118,7 +118,8 @@ namespace TaskTracker.Tests.Features
                 this.ScenarioStart();
                 this.FeatureBackground();
                 testRunner.When("I filter tasks by status \"Active\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should see 2 active tasks", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should see the message \"null\" with code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And("I should see 2 active tasks", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }
@@ -141,7 +142,7 @@ namespace TaskTracker.Tests.Features
                 this.ScenarioStart();
                 this.FeatureBackground();
                 testRunner.When("I filter tasks by status \"Unknown\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should see the error message \"Invalid status filter\" for task filtering", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should see the message \"Invalid status filter\" with code 400", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
             }
             this.ScenarioCleanup();
         }

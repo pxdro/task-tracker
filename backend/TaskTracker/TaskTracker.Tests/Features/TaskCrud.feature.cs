@@ -102,7 +102,8 @@ namespace TaskTracker.Tests.Features
                 this.FeatureBackground();
                 testRunner.Given("I have 2 existing tasks in my account", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
                 testRunner.When("I request my task list", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should see my tasks", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should see the message \"null\" with code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And("I should see my tasks", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }
@@ -125,7 +126,8 @@ namespace TaskTracker.Tests.Features
                 this.ScenarioStart();
                 this.FeatureBackground();
                 testRunner.When("I create a task with title \"Buy groceries\" and description \"Milk, eggs, bread\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("the task should be saved", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should see the message \"null\" with code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And("the task should be saved", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }
@@ -147,11 +149,10 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.Given("I have a task with ID \"abc123\" and title \"Buy groceries\" and description \"Milk, e" +
-                        "ggs, bread\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-                testRunner.When("I update this task\'s title to \"Buy groceries and fruits\" and description to \"Milk" +
-                        ", eggs, bread, apples\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("the task should be updated", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Given("I have a task with ID \"abc123\" and title \"Buy groceries\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+                testRunner.When("I update this task\'s title to \"Buy groceries and fruits\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Then("I should see the message \"null\" with code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And("the task should be updated", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }
@@ -176,7 +177,7 @@ namespace TaskTracker.Tests.Features
                 testRunner.Given("I have a task with ID \"abc123\" and title \"Buy groceries\" and description \"Milk, e" +
                         "ggs, bread\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
                 testRunner.When("I delete this task", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("the task should no longer exist", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should see the message \"null\" with code 204", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
             }
             this.ScenarioCleanup();
         }

@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+﻿using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -46,6 +48,24 @@ namespace TaskTracker.Tests.StepDefinitions
                 };
                 await _client.PostAsJsonAsync("/api/tasks", taskDto);
             }
+        }
+
+        [Then(@"I should see the message ""(.*)"" with code (\d+)")]
+        public async Task ThenIShouldSeeTheMessageWithCode(string? expectedMessage, int expectedCode)
+        {
+            var response = (HttpResponseMessage)_ctx["response"];
+            var responseBody = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+            var message = responseBody?.GetValueOrDefault("message");
+
+            if (expectedMessage == "null")
+                expectedMessage = null;
+
+            Assert.Equal((HttpStatusCode)expectedCode, response.StatusCode);
+
+            if (expectedMessage == null)
+                Assert.Null(message);
+            else
+                Assert.Equal(expectedMessage, message);
         }
 
         private void SetAuthorizationHeader()

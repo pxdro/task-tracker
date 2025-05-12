@@ -5,7 +5,7 @@ using System.Net;
 using TechTalk.SpecFlow;
 using System.Text.Json;
 
-namespace TaskTracker.Tests.StepDefinitions
+namespace TaskTracker.Tests.Steps
 {
     [Binding]
     public class TaskFilteringSteps
@@ -44,16 +44,6 @@ namespace TaskTracker.Tests.StepDefinitions
             {
                 Assert.Equal("Active", task["status"].ToString());
             }
-        }
-
-        [Then(@"I should see the error message ""(.*)"" for task filtering")]
-        public async Task ThenIShouldSeeTheErrorMessageForTaskFiltering(string errorMessage)
-        {
-            var response = (HttpResponseMessage)_ctx["response"];
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-
-            var content = await response.Content.ReadAsStringAsync();
-            Assert.Contains(errorMessage, content);
         }
 
         private void SetAuthorizationHeader()

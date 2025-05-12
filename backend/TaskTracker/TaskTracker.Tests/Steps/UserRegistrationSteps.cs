@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using TechTalk.SpecFlow;
 
-namespace TaskTracker.Tests.StepDefinitions
+namespace TaskTracker.Tests.Steps
 {
     [Binding]
     public class UserRegistrationSteps
@@ -23,13 +23,6 @@ namespace TaskTracker.Tests.StepDefinitions
             _ctx["email"] = email;
             var dto = new { Email = email, Password = password };
             _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/register", dto);
-        }
-
-        [Then(@"my account should be created")]
-        public void ThenMyAccountShouldBeCreated()
-        {
-            var response = (HttpResponseMessage)_ctx["response"];
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         }
         
         [Then(@"I should receive a confirmation email")]
@@ -54,15 +47,6 @@ namespace TaskTracker.Tests.StepDefinitions
             var email = _ctx["email"].ToString();
             var dto = new { Email = email, Password = "AnyP@ss123" };
             _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/register", dto);
-        }
-
-        [Then(@"I should see the error message ""(.*)"" for user registration")]
-        public async Task ThenIShouldSeeTheErrorMessageForUserRegistration(string expected)
-        {
-            var response = (HttpResponseMessage)_ctx["response"];
-            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains(expected, body);
         }
     }
 }

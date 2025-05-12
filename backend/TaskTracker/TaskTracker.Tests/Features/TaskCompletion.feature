@@ -16,6 +16,7 @@ Feature: Task Completion
   Scenario: Mark task as completed
     When I mark the task with ID "1" as completed
       # Performs HTTP PATCH to /api/tasks/1/complete
-    Then the task status should be "Completed"
-      # Checks for HTTP 200 OK
-      # Checks that the response body has status = "Completed"
+    Then I should see the message "null" with code 200
+      # Checks for HTTP 200 OK with no message
+    And the task status should be "Completed"
+      # Checks that the task in response body has status = "Completed"

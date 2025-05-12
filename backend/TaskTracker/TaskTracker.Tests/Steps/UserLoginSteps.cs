@@ -3,7 +3,7 @@ using TechTalk.SpecFlow;
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Json;
 
-namespace TaskTracker.Tests.StepDefinitions
+namespace TaskTracker.Tests.Steps
 {
     [Binding]
     public class UserLoginSteps
@@ -34,11 +34,10 @@ namespace TaskTracker.Tests.StepDefinitions
             _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/login", _ctx["dto"]);
         }
 
-        [Then(@"I should login successfully")]
-        public async Task ThenIShouldLoginSuccessfully()
+        [Then(@"I should stay logged in")]
+        public async Task ThenIShouldStayLoggedIn()
         {
             var response = (HttpResponseMessage)_ctx["response"];
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
             Assert.Contains("authToken", body);
             Assert.Contains("refreshToken", body);
@@ -56,17 +55,6 @@ namespace TaskTracker.Tests.StepDefinitions
         {
             var anyDto = new { Email = "unknown@example.com", Password = "AnyPass123" };
             _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/login", anyDto);
-        }
-
-
-        [Then(@"I should see the error message ""(.*)"" for user login")]
-        public async Task ThenIShouldSeeTheErrorMessageForUserLogin(string errorMessage)
-        {
-            var response = (HttpResponseMessage)_ctx["response"];
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-
-            var content = await response.Content.ReadAsStringAsync();
-            Assert.Contains(errorMessage, content);
         }
     }
 }

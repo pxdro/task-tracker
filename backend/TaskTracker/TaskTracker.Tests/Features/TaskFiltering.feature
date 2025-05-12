@@ -17,13 +17,13 @@ Feature: Task Filtering
   Scenario: Filter active tasks
     When I filter tasks by status "Active"
       # Performs HTTP GET to /api/tasks?status=Active
-    Then I should see 2 active tasks
-      # Checks for HTTP 200 OK
+    Then I should see the message "null" with code 200
+      # Checks for HTTP 200 OK with no message
+    And I should see 2 active tasks
       # Validates that 2 tasks are returned, both with status = "Active"
 
   Scenario: Filter with invalid status
     When I filter tasks by status "Unknown"
       # Performs HTTP GET to /api/tasks?status=Unknown
-    Then I should see the error message "Invalid status filter" for task filtering
-      # Checks for HTTP 400 Bad Request
-      # Checks for the error message "Invalid status filter" in response body
+    Then I should see the message "Invalid status filter" with code 400
+      # Checks for HTTP 400 Bad Request with message "Invalid status filter"

@@ -25,6 +25,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapPost("/test", () => "ok");
+
 app.MapPost("/api/auth/register", async (RegisterDto dto, IUserService userService, HttpContext context) =>
 {
     var success = await userService.RegisterAsync(dto);
@@ -42,7 +44,26 @@ app.MapPost("/api/auth/register", async (RegisterDto dto, IUserService userServi
     }
 });
 
-app.MapPost("/test", () => "ok");
+app.MapPost("/api/auth/login", async (RegisterDto dto, IUserService userService, HttpContext context) =>
+{
+    var result = await userService.LoginAsync(dto);
+
+    if (result.Message == "Email unregistered")
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        await context.Response.WriteAsJsonAsync(new { message = result.Message });
+    }
+    else if (result.Message == "Wrong password")
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsJsonAsync(new { message = result.Message });
+    }
+    else
+    {
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        await context.Response.WriteAsJsonAsync(new { result.AuthToken, result.RefreshToken });
+    }
+});
 
 app.Run();
 

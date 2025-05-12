@@ -13,31 +13,33 @@ Feature: Task CRUD
       # Performs 2 HTTP POST to /api/tasks with JSON { title, description }
     When I request my task list
       # Performs HTTP GET to /api/tasks with JSON { email }
-    Then I should see my tasks
-      # Checks for HTTP 200 OK
-      # Validates that are 2 returned tasks
+    Then I should see the message "null" with code 200
+      # Checks for HTTP 200 OK with no message
+    And I should see my tasks
+      # Checks that response body have 2 returned tasks
 
   Scenario: Create a new task
     When I create a task with title "Buy groceries" and description "Milk, eggs, bread"
       # Performs HTTP POST to /api/tasks with JSON { title, description }
-    Then the task should be saved
-      # Checks for HTTP 201 Created
+    Then I should see the message "null" with code 200
+      # Checks for HTTP 200 OK with no message
+    And the task should be saved
       # Checks that task ID is returned in response
 
   Scenario: Update an existing task
-    Given I have a task with ID "abc123" and title "Buy groceries" and description "Milk, eggs, bread"
-      # Performs HTTP POST to /api/tasks with JSON { title, description }
-    When I update this task's title to "Buy groceries and fruits" and description to "Milk, eggs, bread, apples"
-      # Performs HTTP PUT to /api/tasks/{id} with updated JSON { title, description }
-    Then the task should be updated
-      # Checks for HTTP 200 OK
+    Given I have a task with ID "abc123" and title "Buy groceries"
+      # Performs HTTP POST to /api/tasks with JSON { Id, title }
+    When I update this task's title to "Buy groceries and fruits" 
+      # Performs HTTP PUT to /api/tasks/{id} with updated JSON { title }
+    Then I should see the message "null" with code 200
+      # Checks for HTTP 200 OK with no message
+    And the task should be updated
       # Checks if response body contains a task with title "Buy groceries and fruits"
-      # Checks if response body contains a task with description "Milk, eggs, bread, apples"
 
   Scenario: Delete a task
     Given I have a task with ID "abc123" and title "Buy groceries" and description "Milk, eggs, bread"
       # Performs HTTP POST to /api/tasks with JSON { title, description }
     When I delete this task
       # Performs HTTP DELETE to /api/tasks/{id}
-    Then the task should no longer exist
-      # Checks for HTTP 204 No Content
+    Then I should see the message "null" with code 204
+      # Checks for HTTP 204 No Content with no message

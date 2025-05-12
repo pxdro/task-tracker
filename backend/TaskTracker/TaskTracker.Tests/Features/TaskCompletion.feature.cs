@@ -114,7 +114,8 @@ namespace TaskTracker.Tests.Features
                 this.ScenarioStart();
                 this.FeatureBackground();
                 testRunner.When("I mark the task with ID \"1\" as completed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("the task status should be \"Completed\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should see the message \"null\" with code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And("the task status should be \"Completed\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }

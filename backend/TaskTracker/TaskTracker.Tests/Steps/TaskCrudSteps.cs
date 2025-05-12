@@ -5,7 +5,7 @@ using System.Text.Json;
 using TechTalk.SpecFlow;
 using System.Net.Http.Headers;
 
-namespace TaskTracker.Tests.StepDefinitions
+namespace TaskTracker.Tests.Steps
 {
     [Binding]
     public class TaskCrudSteps

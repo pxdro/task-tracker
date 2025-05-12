@@ -8,8 +8,9 @@ Feature: User Login
       # Performs HTTP POST to /api/auth/register with JSON { email, password }
     When I submit these email and password
       # Performs HTTP POST to /api/auth/login with JSON { email, password }
-    Then I should login successfully
-      # Checks for HTTP 200 OK
+    Then I should see the message "null" with code 200
+      # Checks for HTTP 200 OK with no message
+    And I should stay logged in
       # Checks for a valid JWT auth token
       # Checks for a valid JWT refresh token
 
@@ -18,13 +19,11 @@ Feature: User Login
       # Performs HTTP POST to /api/auth/register with JSON { email, password }
     When I submit this email and wrong password
       # Performs HTTP POST to /api/auth/login with JSON { email, "WrongPass123" }
-    Then I should see the error message "Wrong password" for user login
-      # Checks for HTTP 401 Unauthorized 
-      # Checks for the error message "Wrong password" in response body 
+    Then I should see the message "Wrong password" with code 401
+      # Checks for HTTP 401 Unauthorized with message "Wrong password"
 
   Scenario: Login with unregistered email
     When I submit unregistered email and any password
       # Performs HTTP POST to /api/auth/login with JSON { "unknown@example.com", "AnyPass123" }
-    Then I should see the error message "User not found" for user login
-      # Checks for HTTP 404 Not Found 
-      # Checks for the error message "User not found" in response body 
+    Then I should see the message "Email unregistered" with code 404
+      # Checks for HTTP 404 Not Found with message "Email unregistered"

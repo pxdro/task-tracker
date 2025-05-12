@@ -95,7 +95,7 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 testRunner.When("I submit valid email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("my account should be created", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should see the message \"Email registered successfully\" with code 201", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("I should receive a confirmation email", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
@@ -119,7 +119,7 @@ namespace TaskTracker.Tests.Features
                 this.ScenarioStart();
                 testRunner.Given("I have already registered with email \"user@example.com\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
                 testRunner.When("I submit this email and any password", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should see the error message \"Email already registered\" for user registration", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should see the message \"Email already registered\" with code 409", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
             }
             this.ScenarioCleanup();
         }

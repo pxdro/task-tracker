@@ -5,7 +5,7 @@ using System.Net;
 using TechTalk.SpecFlow;
 using System.Text.Json;
 
-namespace TaskTracker.Tests.StepDefinitions
+namespace TaskTracker.Tests.Steps
 {
     [Binding]
     public class TaskCompletionSteps
