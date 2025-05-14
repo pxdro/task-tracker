@@ -3,18 +3,29 @@ Feature: User Registration
   I want to register with my email and password
   So that I can create and manage tasks
 
-  Scenario: Successful registration
-    When I submit valid email "user@example.com" and password "Str0ngP@ss!"
-      # Performs HTTP POST to /api/auth/register with JSON { email, password }
-    Then I should see the message "Email registered successfully" with code 201
-      # Checks for HTTP 201 Created with message "Email registered successfully"
-    And I should receive a confirmation email
-      # Checks for X-Confirmation-Sent header in response
+  Background:
+    Given the API is running
 
-  Scenario: Registration with existing email
-    Given I have already registered with email "user@example.com"
-      # Performs HTTP POST to /api/auth/register with JSON { email, password }
-    When I submit this email and any password
-      # Performs HTTP POST to /api/auth/register with JSON { email, password }
-    Then I should see the message "Email already registered" with code 409
-      # Checks for HTTP 409 Conflict with message "Email already registered"
+  Scenario Outline: Registration fails due to invalid input
+    When I register email "<email>" and password "<password>"
+    Then I should be returned code <status>
+    And I should see the message "<message>"
+
+  Examples:
+    | email             | password      | status | message                    |
+    | invalid-email     | Str0ngP@ss!   | 400    | "Invalid email format"     |
+    |                   | Str0ngP@ss!   | 400    | "Missing required data"    |
+    | user@example.com  |               | 400    | "Missing required data"    |
+    |                   |               | 400    | "Missing required data"    |
+
+  Scenario: Successful registration
+    When I register email "user@example.com" and password "Str0ngP@ss!"
+    Then I should be returned code 201
+    And I should see the message "Email registered successfully"
+    And I should receive a confirmation email
+    
+  Scenario: Registration with already registered email
+    Given I have registered with email "user@example.com" and password "Str0ngP@ss!"
+    When I register email "user@example.com" and password "Str0ngP@ss!"
+    Then I should be returned code 409
+    And I should see the message "Email already registered"

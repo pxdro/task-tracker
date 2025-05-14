@@ -1,60 +1,50 @@
-﻿using System.Net;
-using TechTalk.SpecFlow;
+﻿using TechTalk.SpecFlow;
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace TaskTracker.Tests.Steps
 {
     [Binding]
-    public class UserLoginSteps
+    public class UserLoginSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
     {
-        private readonly HttpClient _client;
-        private readonly ScenarioContext _ctx;
+        private readonly HttpClient _client = factory.CreateClient();
+        private readonly ScenarioContext _ctx = ctx;
 
-        public UserLoginSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
+        [When(@"I login with email ""(.*)"" and password ""(.*)""")]
+        public async Task WhenILoginWithEmailAndPassword(string email, string password)
         {
-            _client = factory.CreateClient();
-            _ctx = ctx;
+            var dto = new { Email = email, Password = password };
+            var response = await _client.PostAsJsonAsync("/api/auth/login", dto);
+            _ctx["response"] = response;
+
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(content);
+                var token = doc.RootElement.GetProperty("authToken").GetString();
+                _ctx["authToken"] = token;
+                _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
         }
 
-        [Given(@"I have registered with email ""(.*)"" and password ""(.*)""")]
-        public async Task GivenIHaveRegisteredWithEmailAndPassword(string email, string password)
+        [Then(@"I should receive a valid JWT auth token")]
+        public async Task ThenIShouldReceiveAValidJWTAuthToken()
         {
-            _ctx["email"] = email;
-            _ctx["password"] = password;
-            _ctx["dto"] = new { Email = email, Password = password };
-            var response = await _client.PostAsJsonAsync("/api/auth/register", _ctx["dto"]);
-
-            Assert.True(response.StatusCode == HttpStatusCode.Created, $"Expected 201, got {response.StatusCode}");
+            var response = (HttpResponseMessage)_ctx["response"]!;
+            var content = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(content);
+            Assert.True(doc.RootElement.TryGetProperty("authToken", out _));
         }
 
-        [When(@"I submit these email and password")]
-        public async Task WhenISubmitTheseEmailAndPassword()
+        [Then(@"I should receive a valid refresh token")]
+        public async Task ThenIShouldReceiveAValidRefreshToken()
         {
-            _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/login", _ctx["dto"]);
-        }
-
-        [Then(@"I should stay logged in")]
-        public async Task ThenIShouldStayLoggedIn()
-        {
-            var response = (HttpResponseMessage)_ctx["response"];
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains("authToken", body);
-            Assert.Contains("refreshToken", body);
-        }
-
-        [When(@"I submit this email and wrong password")]
-        public async Task WhenISubmitThisEmailAndWrongPassword()
-        {
-            var wrongDto = new { Email = _ctx["email"], Password = "Wr0ngP@ss!" };
-            _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/login", wrongDto);
-        }
-
-        [When(@"I submit unregistered email and any password")]
-        public async Task WhenISubmitUnregisteredEmailAndAnyPassword()
-        {
-            var anyDto = new { Email = "unknown@example.com", Password = "AnyPass123" };
-            _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/login", anyDto);
+            var response = (HttpResponseMessage)_ctx["response"]!;
+            var content = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(content);
+            Assert.True(doc.RootElement.TryGetProperty("refreshToken", out _));
         }
     }
 }

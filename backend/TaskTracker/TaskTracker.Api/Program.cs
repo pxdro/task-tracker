@@ -1,4 +1,10 @@
+using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.Identity.Data;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using TaskTracker.Domain.DTOs;
+using TaskTracker.Domain.Entities;
+using TaskTracker.Domain.Enums;
 using TaskTracker.Domain.Interfaces;
 using TaskTracker.Infrastructure.Services;
 
@@ -10,6 +16,13 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<IUserService, UserService>();
+builder.Services.AddSingleton<ITaskService, TaskService>();
+
+// Ensure Enums return names instead of numbers
+builder.Services.Configure<JsonOptions>(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 var app = builder.Build();
 
@@ -25,46 +38,73 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapPost("/test", () => "ok");
+app.MapGet("/api/ping", () => "ok");
 
-app.MapPost("/api/auth/register", async (RegisterDto dto, IUserService userService, HttpContext context) =>
+app.MapPost("/api/auth/register", async (UserDto dto, IUserService userService, HttpContext context) =>
 {
-    var success = await userService.RegisterAsync(dto);
+    var userResultDto = await userService.RegisterAsync(dto);
 
-    if (!success)
-    {
-        context.Response.StatusCode = StatusCodes.Status409Conflict;
-        await context.Response.WriteAsJsonAsync(new { message = "Email already registered" });
-    }
-    else
-    {
-        context.Response.Headers.Append("X-Confirmation-Sent", "true");
-        context.Response.StatusCode = StatusCodes.Status201Created;
-        await context.Response.WriteAsJsonAsync(new { message = "Email registered successfully" });
-    }
+    if (userResultDto.StatusCode == 201)
+        context.Response.Headers["X-Confirmation-Sent"] = "true";
+
+    return Results.Json(new { message = userResultDto.Message }, statusCode: userResultDto.StatusCode);
 });
 
-app.MapPost("/api/auth/login", async (RegisterDto dto, IUserService userService, HttpContext context) =>
+app.MapPost("/api/auth/login", async (UserDto dto, IUserService userService, HttpContext context) =>
 {
-    var result = await userService.LoginAsync(dto);
+    var userResultDto = await userService.LoginAsync(dto);
 
-    if (result.Message == "Email unregistered")
+    return userResultDto.StatusCode switch
     {
-        context.Response.StatusCode = StatusCodes.Status404NotFound;
-        await context.Response.WriteAsJsonAsync(new { message = result.Message });
-    }
-    else if (result.Message == "Wrong password")
-    {
-        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-        await context.Response.WriteAsJsonAsync(new { message = result.Message });
-    }
-    else
-    {
-        context.Response.StatusCode = StatusCodes.Status200OK;
-        await context.Response.WriteAsJsonAsync(new { result.AuthToken, result.RefreshToken });
-    }
+        200 => Results.Json(new
+        {
+            authToken = userResultDto.AuthToken,
+            refreshToken = userResultDto.RefreshToken
+        }),
+        _ => Results.Json(new { message = userResultDto.Message }, statusCode: userResultDto.StatusCode)
+    };
+});
+
+app.MapGet("/api/tasks/{userEmail}", (HttpContext http, string userEmail, ITaskService taskService) =>
+{
+    var result = taskService.GetAll(userEmail);
+    return Results.Json(result);
+});
+
+app.MapPost("/api/tasks", (HttpContext http, TaskItem task, ITaskService taskService) =>
+{
+    var user = http.User.Identity?.Name ?? "user@example.com";
+    var response = taskService.Add(user, task);
+    return Results.Json(response);
+});
+
+app.MapPut("/api/tasks", (HttpContext http, string title, TaskItem task, ITaskService taskService) =>
+{
+    var user = http.User.Identity?.Name ?? "user@example.com";
+    var updated = taskService.Update(user, title, task);
+    return updated is null ? Results.NotFound() : Results.Json(updated);
+});
+
+app.MapPost("/api/tasks/{title}/complete", (HttpContext http, string title, ITaskService taskService) =>
+{
+    var user = http.User.Identity?.Name ?? "user@example.com";
+    var updated = taskService.Update(user, title, new TaskItem { Title = title,  Description = null, Status = EnumTaskStatus.Active });
+    return updated is null ? Results.NotFound() : Results.Json(updated);
+});
+
+app.MapDelete("api/tasks/{title}", (HttpContext http, string title, ITaskService taskService) =>
+{
+    var user = http.User.Identity?.Name ?? "user@example.com";
+    var success = taskService.Delete(user, title);
+    return success.Result ? Results.NoContent() : Results.NotFound();
 });
 
 app.Run();
 
 public partial class Program { }
+
+static class ResultExtensions
+{
+    public static IResult WithMessage(this IResult result, string message)
+        => Results.Json(new { message }, statusCode: ((IStatusCodeHttpResult)result).StatusCode ?? 500);
+}

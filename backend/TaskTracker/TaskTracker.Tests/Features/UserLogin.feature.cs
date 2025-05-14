@@ -73,6 +73,11 @@ namespace TaskTracker.Tests.Features
             testRunner.CollectScenarioErrors();
         }
         
+        public virtual void FeatureBackground()
+        {
+            testRunner.Given("the API is running", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+        }
+        
         void System.IDisposable.Dispose()
         {
             this.TestTearDown();
@@ -94,33 +99,12 @@ namespace TaskTracker.Tests.Features
             else
             {
                 this.ScenarioStart();
+                this.FeatureBackground();
                 testRunner.Given("I have registered with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-                testRunner.When("I submit these email and password", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should see the message \"null\" with code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-                testRunner.And("I should stay logged in", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-            }
-            this.ScenarioCleanup();
-        }
-        
-        [Xunit.SkippableFactAttribute(DisplayName="Login with incorrect password")]
-        [Xunit.TraitAttribute("FeatureTitle", "User Login")]
-        [Xunit.TraitAttribute("Description", "Login with incorrect password")]
-        public void LoginWithIncorrectPassword()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Login with incorrect password", null, tagsOfScenario, argumentsOfScenario, featureTags);
-            this.ScenarioInitialize(scenarioInfo);
-            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                this.ScenarioStart();
-                testRunner.Given("I have registered with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-                testRunner.When("I submit this email and wrong password", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should see the message \"Wrong password\" with code 401", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.When("I login with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Then("I should be returned code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And("I should receive a valid JWT auth token", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+                testRunner.And("I should receive a valid refresh token", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }
@@ -141,8 +125,35 @@ namespace TaskTracker.Tests.Features
             else
             {
                 this.ScenarioStart();
-                testRunner.When("I submit unregistered email and any password", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should see the message \"Email unregistered\" with code 404", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                this.FeatureBackground();
+                testRunner.When("I login with email \"unknown@example.com\" and password \"AnyPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Then("I should be returned code 404", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And("I should see the message \"Email unregistered\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+            }
+            this.ScenarioCleanup();
+        }
+        
+        [Xunit.SkippableFactAttribute(DisplayName="Login with wrong password")]
+        [Xunit.TraitAttribute("FeatureTitle", "User Login")]
+        [Xunit.TraitAttribute("Description", "Login with wrong password")]
+        public void LoginWithWrongPassword()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Login with wrong password", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            this.ScenarioInitialize(scenarioInfo);
+            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                this.ScenarioStart();
+                this.FeatureBackground();
+                testRunner.Given("I have registered with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+                testRunner.When("I login with email \"user@example.com\" and password \"WrongPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Then("I should be returned code 401", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And("I should see the message \"Wrong password\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }

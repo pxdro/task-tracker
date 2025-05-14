@@ -6,47 +6,24 @@ using TechTalk.SpecFlow;
 namespace TaskTracker.Tests.Steps
 {
     [Binding]
-    public class UserRegistrationSteps
+    public class UserRegistrationSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
     {
-        private readonly HttpClient _client;
-        private readonly ScenarioContext _ctx;
+        private readonly HttpClient _client = factory.CreateClient();
+        private readonly ScenarioContext _ctx = ctx;
 
-        public UserRegistrationSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
+        [When(@"I register email ""(.*)"" and password ""(.*)""")]
+        public async Task WhenIRegisterEmailAndPassword(string email, string password)
         {
-            _client = factory.CreateClient();
-            _ctx = ctx;
-        }
-        
-        [When(@"I submit valid email ""(.*)"" and password ""(.*)""")]
-        public async Task WhenISubmitValidEmailAndPassword(string email, string password)
-        {
-            _ctx["email"] = email;
             var dto = new { Email = email, Password = password };
-            _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/register", dto);
+            var response = await _client.PostAsJsonAsync("/api/auth/register", dto);
+            _ctx["response"] = response;
         }
-        
+
         [Then(@"I should receive a confirmation email")]
         public void ThenIShouldReceiveAConfirmationEmail()
         {
-            var response = (HttpResponseMessage)_ctx["response"];
+            var response = (HttpResponseMessage)_ctx["response"]!;
             Assert.True(response.Headers.Contains("X-Confirmation-Sent"));
-        }
-        
-        [Given(@"I have already registered with email ""(.*)""")]
-        public async Task GivenIHaveAlreadyRegisteredWithEmail(string email)
-        {
-            var dto = new { Email = email, Password = "AnyP@ss123" };
-            var initial = await _client.PostAsJsonAsync("/api/auth/register", dto);
-            Assert.Equal(HttpStatusCode.Created, initial.StatusCode);
-            _ctx["email"] = email;
-        }
-
-        [When(@"I submit this email and any password")]
-        public async Task WhenISubmitThisEmailAndAnyPassword()
-        {
-            var email = _ctx["email"].ToString();
-            var dto = new { Email = email, Password = "AnyP@ss123" };
-            _ctx["response"] = await _client.PostAsJsonAsync("/api/auth/register", dto);
         }
     }
 }

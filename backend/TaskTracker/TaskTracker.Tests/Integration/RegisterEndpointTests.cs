@@ -6,27 +6,25 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using TaskTracker.Domain.DTOs;
+using TaskTracker.Domain.Interfaces;
 using TaskTracker.Infrastructure.Services;
 
 namespace TaskTracker.Tests.Integration
 {
-    public class RegistrationEndpointTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IDisposable
+    public class RegisterEndpointTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>, IDisposable
     {
-        private readonly WebApplicationFactory<Program> _factory = factory.WithWebHostBuilder(builder =>
-                builder.ConfigureTestServices(services =>
-                {
-                    var userService = services.BuildServiceProvider().GetRequiredService<UserService>();
-                    userService.Reset();
-                }));
+        private readonly WebApplicationFactory<Program> _factory = factory;
 
         [Fact]
         public async Task Post_Register_NewUser_Returns201AndHeader()
         {
             // Arrange  
+            var userService = _factory.Services.GetRequiredService<IUserService>() as UserService;
+            userService?.Reset();
             var client = _factory.CreateClient();
-            var registerDto = new RegisterDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
+            var UserDto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
             var content = new StringContent(
-                JsonSerializer.Serialize(registerDto),
+                JsonSerializer.Serialize(UserDto),
                 Encoding.UTF8,
                 "application/json");
 
@@ -46,10 +44,12 @@ namespace TaskTracker.Tests.Integration
         public async Task Post_Register_ExistingUser_Returns409WithErrorMessage()
         {
             // Arrange  
+            var userService = _factory.Services.GetRequiredService<IUserService>() as UserService;
+            userService?.Reset();
             var client = _factory.CreateClient();
-            var registerDto = new RegisterDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
+            var UserDto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
             var content = new StringContent(
-                JsonSerializer.Serialize(registerDto),
+                JsonSerializer.Serialize(UserDto),
                 Encoding.UTF8,
                 "application/json");
 
@@ -69,8 +69,8 @@ namespace TaskTracker.Tests.Integration
 
         public void Dispose()
         {
-            var userService = _factory.Services.GetRequiredService<UserService>();
-            userService.Reset();
+            var userService = _factory.Services.GetRequiredService<IUserService>() as UserService;
+            userService?.Reset();
         }
     }
 }
