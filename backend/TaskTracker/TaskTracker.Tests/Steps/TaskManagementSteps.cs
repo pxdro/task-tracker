@@ -58,7 +58,15 @@ namespace TaskTracker.Tests.Steps
         [When(@"I request my task list")]
         public async Task WhenIRequestMyTaskList()
         {
-            var response = await _client.GetAsync($"/api/tasks/{_ctx["email"]}");
+            var response = await _client.GetAsync($"/api/tasks?userEmail={_ctx["email"]}");
+            _ctx["response"] = response;
+        }
+
+        [When(@"I request tasks filtered by (.*) ""(.*)""")]
+        public async Task WhenIRequestTasksFilteredBy(string field, string value)
+        {
+            var url = $"/api/tasks?userEmail={_ctx["email"]}&field={field}&value={value}";
+            var response = await _client.GetAsync(url);
             _ctx["response"] = response;
         }
 
@@ -72,6 +80,7 @@ namespace TaskTracker.Tests.Steps
             Assert.Equal(expected, tasks.Count);
         }
 
+        /*--*/
         [When(@"I create a task with title ""(.*)"" and description ""(.*)""")]
         public async Task WhenICreateTask(string title, string description)
         {
@@ -80,18 +89,9 @@ namespace TaskTracker.Tests.Steps
             _ctx["response"] = response;
         }
 
-        [When(@"I request tasks filtered by (.*) ""(.*)""")]
-        public async Task WhenIRequestTasksFilteredBy(string field, string value)
-        {
-            var url = $"/api/tasks?{field}={Uri.EscapeDataString(value)}";
-            var response = await _client.GetAsync(url);
-            _ctx["response"] = response;
-        }
-
         [When(@"I update the task titled ""(.*)"" to have title ""(.*)""")]
         public async Task WhenIUpdateTaskTitle(string oldTitle, string newTitle)
         {
-            // Fetch all to find ID
             await WhenIRequestMyTaskList();
             var content = await ((HttpResponseMessage)_ctx["response"]).Content.ReadAsStringAsync();
             var tasks = JsonSerializer.Deserialize<List<JsonElement>>(content)!;
@@ -171,6 +171,7 @@ namespace TaskTracker.Tests.Steps
             var status = doc.RootElement.GetProperty("status").GetString();
             Assert.Equal(expectedStatus, status);
         }
+        /*--*/
 
         private void SetAuthorizationHeader()
         {

@@ -65,11 +65,16 @@ app.MapPost("/api/auth/login", async (UserDto dto, IUserService userService, Htt
     };
 });
 
-app.MapGet("/api/tasks/{userEmail}", (HttpContext http, string userEmail, ITaskService taskService) =>
+app.MapGet("/api/tasks", (HttpContext http, string userEmail, string? field, string? value, ITaskService taskService) =>
 {
-    var result = taskService.GetAll(userEmail);
+    Task<List<TaskItem>> result;
+    if (field == null)
+        result = taskService.GetAll(userEmail);
+    else
+        result = taskService.Where(userEmail, field, value);
     return Results.Json(result);
 });
+
 
 app.MapPost("/api/tasks", (HttpContext http, TaskItem task, ITaskService taskService) =>
 {
