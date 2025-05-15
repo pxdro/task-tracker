@@ -200,7 +200,7 @@ namespace TaskTracker.Tests.Features
                 testRunner.When("I update the task titled \"Buy groceries\" to have title \"Buy groceries and fruits\"" +
                         "", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-                testRunner.And("I should see <count> tasks", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+                testRunner.And("I should see 1 tasks", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
                 testRunner.And("the task should have title \"Buy groceries and fruits\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();

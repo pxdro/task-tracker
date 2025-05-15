@@ -65,39 +65,36 @@ app.MapPost("/api/auth/login", async (UserDto dto, IUserService userService, Htt
     };
 });
 
-app.MapGet("/api/tasks", (HttpContext http, string userEmail, string? field, string? value, ITaskService taskService) =>
+app.MapGet("/api/tasks", (HttpContext http, string? field, string? value, ITaskService taskService) =>
 {
+    var user = http.User.Identity?.Name ?? "user@example.com";
     Task<List<TaskItem>> result;
-    if (field == null)
-        result = taskService.GetAll(userEmail);
-    else
-        result = taskService.Where(userEmail, field, value);
-    return Results.Json(result);
+    result = taskService.GetAll(user, field, value);
+    return Results.Json(result.Result);
 });
-
 
 app.MapPost("/api/tasks", (HttpContext http, TaskItem task, ITaskService taskService) =>
 {
     var user = http.User.Identity?.Name ?? "user@example.com";
     var response = taskService.Add(user, task);
-    return Results.Json(response);
+    return Results.Json(response.Result);
 });
 
 app.MapPut("/api/tasks", (HttpContext http, string title, TaskItem task, ITaskService taskService) =>
 {
     var user = http.User.Identity?.Name ?? "user@example.com";
     var updated = taskService.Update(user, title, task);
-    return updated is null ? Results.NotFound() : Results.Json(updated);
+    return updated is null ? Results.NotFound() : Results.Json(updated.Result);
 });
 
-app.MapPost("/api/tasks/{title}/complete", (HttpContext http, string title, ITaskService taskService) =>
+app.MapPatch("/api/tasks/{title}", async (string title, EnumTaskStatus status, HttpContext http, ITaskService taskService) =>
 {
     var user = http.User.Identity?.Name ?? "user@example.com";
-    var updated = taskService.Update(user, title, new TaskItem { Title = title,  Description = null, Status = EnumTaskStatus.Active });
+    var updated = await taskService.ChangeStatus(user, title, status);
     return updated is null ? Results.NotFound() : Results.Json(updated);
 });
 
-app.MapDelete("api/tasks/{title}", (HttpContext http, string title, ITaskService taskService) =>
+app.MapDelete("api/tasks/", (HttpContext http, string title, ITaskService taskService) =>
 {
     var user = http.User.Identity?.Name ?? "user@example.com";
     var success = taskService.Delete(user, title);

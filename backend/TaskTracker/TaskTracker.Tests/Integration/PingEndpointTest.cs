@@ -10,7 +10,7 @@ namespace TaskTracker.Tests.Integration
         [Fact]
         public async Task Ping_Test()
         {
-            var response = await _client.PostAsync("/test", null);
+            var response = await _client.GetAsync("/api/ping");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
     }

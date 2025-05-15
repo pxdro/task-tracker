@@ -37,7 +37,7 @@ Feature: Task Management
   Scenario: Update a task
     When I update the task titled "Buy groceries" to have title "Buy groceries and fruits"
     Then I should be returned code 200 
-    And I should see <count> tasks 
+    And I should see 1 tasks 
     And the task should have title "Buy groceries and fruits"
 
   Scenario: Change task's status

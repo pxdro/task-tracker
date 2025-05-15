@@ -8,7 +8,6 @@ namespace TaskTracker.Infrastructure.Services
     {
         private readonly Dictionary<string, string> _users = []; // Emails and passwords
 
-
         public Task<UserResultDto> RegisterAsync(UserDto UserDto)
         {
             if (string.IsNullOrWhiteSpace(UserDto.Email) || string.IsNullOrWhiteSpace(UserDto.Password))

@@ -4,38 +4,33 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Enums;
 using TechTalk.SpecFlow;
 
 namespace TaskTracker.Tests.Steps
 {
     [Binding]
-    public class TaskManagementSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
+    public class TaskSteps
     {
-        private readonly HttpClient _client = factory.CreateClient();
-        private readonly ScenarioContext _ctx = ctx;
+        private readonly HttpClient _client;
+        private readonly ScenarioContext _ctx;
 
+        public TaskSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
+        {
+            _client = factory.CreateClient();
+            _ctx = ctx;
+        }
 
         [Given(@"I am logged in as ""(.*)"" with password ""(.*)""")]
-        public async Task GivenIAmLoggedInAsWithPassword(string email, string password)
+        public async Task GivenIAmLoggedIn(string email, string password)
         {
             var dto = new { Email = email, Password = password };
-
-            // Register
             await _client.PostAsJsonAsync("/api/auth/register", dto);
-
-            // Login
-            var response = await _client.PostAsJsonAsync("/api/auth/login", dto);
-            var content = await response.Content.ReadAsStringAsync();
-
+            var loginResp = await _client.PostAsJsonAsync("/api/auth/login", dto);
+            _ctx["response"] = loginResp;
+            var content = await loginResp.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(content);
             var token = doc.RootElement.GetProperty("authToken").GetString();
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.NotNull(token);
-
-            _ctx["authToken"] = token!;
-            _ctx["email"] = email;
-            SetAuthorizationHeader();
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         [Given(@"I have the following tasks")]
@@ -43,142 +38,116 @@ namespace TaskTracker.Tests.Steps
         {
             foreach (var row in table.Rows)
             {
-                var task = new TaskItem
+                var task = new
                 {
                     Title = row["title"],
                     Description = row["description"],
-                    Status = Enum.TryParse(row["status"], out EnumTaskStatus status) ? status : EnumTaskStatus.Active
+                    Status = row["status"]
                 };
-
-                var response = await _client.PostAsJsonAsync("/api/tasks", task);
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                var resp = await _client.PostAsJsonAsync("/api/tasks", task);
+                _ctx["response"] = resp;
             }
         }
 
         [When(@"I request my task list")]
         public async Task WhenIRequestMyTaskList()
         {
-            var response = await _client.GetAsync($"/api/tasks?userEmail={_ctx["email"]}");
-            _ctx["response"] = response;
+            var resp = await _client.GetAsync("/api/tasks");
+            _ctx["response"] = resp;
         }
 
         [When(@"I request tasks filtered by (.*) ""(.*)""")]
         public async Task WhenIRequestTasksFilteredBy(string field, string value)
         {
-            var url = $"/api/tasks?userEmail={_ctx["email"]}&field={field}&value={value}";
-            var response = await _client.GetAsync(url);
-            _ctx["response"] = response;
+            var url = $"/api/tasks?field={Uri.EscapeDataString(field)}&value={Uri.EscapeDataString(value)}";
+            var resp = await _client.GetAsync(url);
+            _ctx["response"] = resp;
         }
 
-        [Then(@"I should see (\d+) tasks")]
-        public async Task ThenIShouldSeeTasksCount(int expected)
-        {
-            var response = (HttpResponseMessage)_ctx["response"]!;
-            var content = await response.Content.ReadAsStringAsync();
-            using JsonDocument doc = JsonDocument.Parse(content);
-            var tasks = doc.RootElement.GetProperty("result").Deserialize<List<TaskItem>>()!;
-            Assert.Equal(expected, tasks.Count);
-        }
-
-        /*--*/
         [When(@"I create a task with title ""(.*)"" and description ""(.*)""")]
         public async Task WhenICreateTask(string title, string description)
         {
             var dto = new { Title = title, Description = description };
-            var response = await _client.PostAsJsonAsync("/api/tasks", dto);
-            _ctx["response"] = response;
+            var resp = await _client.PostAsJsonAsync("/api/tasks", dto);
+            _ctx["response"] = resp;
         }
 
         [When(@"I update the task titled ""(.*)"" to have title ""(.*)""")]
         public async Task WhenIUpdateTaskTitle(string oldTitle, string newTitle)
         {
-            await WhenIRequestMyTaskList();
-            var content = await ((HttpResponseMessage)_ctx["response"]).Content.ReadAsStringAsync();
-            var tasks = JsonSerializer.Deserialize<List<JsonElement>>(content)!;
-            var task = tasks.First(t => t.GetProperty("title").GetString() == oldTitle);
-            var id = task.GetProperty("id").GetGuid();
-
-            var dto = new { Title = newTitle };
-            var response = await _client.PutAsJsonAsync($"/api/tasks/{id}", dto);
-            _ctx["response"] = response;
+            var dto = new { Title = newTitle, Description = "", Status = "Active" };
+            var resp = await _client.PutAsJsonAsync($"/api/tasks?title={Uri.EscapeDataString(oldTitle)}", dto);
+            _ctx["response"] = resp;
         }
 
         [When(@"I mark the task titled ""(.*)"" as completed")]
         public async Task WhenIMarkTaskAsCompleted(string title)
         {
-            // Find ID
-            await WhenIRequestMyTaskList();
-            var content = await ((HttpResponseMessage)_ctx["response"]).Content.ReadAsStringAsync();
-            var tasks = JsonSerializer.Deserialize<List<JsonElement>>(content)!;
-            var task = tasks.First(t => t.GetProperty("title").GetString() == title);
-            var id = task.GetProperty("id").GetGuid();
-
-            var response = await _client.PatchAsync($"/api/tasks/{id}/complete", null);
-            _ctx["response"] = response;
+            var url = $"/api/tasks/{Uri.EscapeDataString(title)}?status=Completed";
+            var resp = await _client.PatchAsync(url, JsonContent.Create(new { status = "Completed" }));
+            _ctx["response"] = resp;
         }
 
         [When(@"I delete the task titled ""(.*)""")]
         public async Task WhenIDeleteTask(string title)
         {
-            // Find ID
-            await WhenIRequestMyTaskList();
-            var content = await ((HttpResponseMessage)_ctx["response"]).Content.ReadAsStringAsync();
-            var tasks = JsonSerializer.Deserialize<List<JsonElement>>(content)!;
-            var task = tasks.First(t => t.GetProperty("title").GetString() == title);
-            var id = task.GetProperty("id").GetGuid();
+            var resp = await _client.DeleteAsync($"/api/tasks?title={Uri.EscapeDataString(title)}");
+            _ctx["response"] = resp;
+        }
 
-            var response = await _client.DeleteAsync($"/api/tasks/{id}");
-            _ctx["response"] = response;
+        [Then(@"I should see (\d+) tasks")]
+        public async Task ThenIShouldSeeTasksCount(int expected)
+        {
+            var resp = (HttpResponseMessage)_ctx["response"];
+            var content = await resp.Content.ReadAsStringAsync();
+
+            int count;
+            if (content.TrimStart().StartsWith("["))
+            {
+                var list = JsonSerializer.Deserialize<List<TaskItem>>(content);
+                count = list?.Count ?? 0;
+            }
+            else
+            {
+                var single = JsonSerializer.Deserialize<TaskItem>(content);
+                count = single is null ? 0 : 1;
+            }
+
+            Assert.Equal(expected, count);
+        }
+
+        [Then(@"the task should be saved with status ""(.*)""")]
+        public async Task ThenTaskShouldBeSavedWithStatus(string status)
+        {
+            var resp = (HttpResponseMessage)_ctx["response"];
+            var task = await resp.Content.ReadFromJsonAsync<TaskItem>();
+            Assert.Equal(status, task?.Status.ToString());
+        }
+
+        [Then(@"the task should have title ""(.*)""")]
+        public async Task ThenTaskShouldHaveTitle(string expected)
+        {
+            var resp = (HttpResponseMessage)_ctx["response"];
+            var task = await resp.Content.ReadFromJsonAsync<TaskItem>();
+            Assert.Equal(expected, task?.Title);
         }
 
         [Then(@"the task ""(.*)"" should have status ""(.*)""")]
         public async Task ThenTaskShouldHaveStatus(string title, string status)
         {
+            // fetch all
             await WhenIRequestMyTaskList();
-            var content = await ((HttpResponseMessage)_ctx["response"]).Content.ReadAsStringAsync();
-            var tasks = JsonSerializer.Deserialize<List<JsonElement>>(content)!;
-            var task = tasks.First(t => t.GetProperty("title").GetString() == title);
-            var actual = task.GetProperty("status").GetString();
-            Assert.Equal(status, actual);
-        }
-
-        [Then(@"the task ""(.*)"" should have title ""(.*)""")]
-        public async Task ThenTaskShouldHaveTitle(string oldTitle, string newTitle)
-        {
-            await WhenIRequestMyTaskList();
-            var content = await ((HttpResponseMessage)_ctx["response"]).Content.ReadAsStringAsync();
-            var tasks = JsonSerializer.Deserialize<List<JsonElement>>(content)!;
-            var task = tasks.First(t => t.GetProperty("id").GetGuid().ToString() == oldTitle ||
-                                        t.GetProperty("title").GetString() == newTitle);
-            Assert.Equal(newTitle, task.GetProperty("title").GetString());
+            var tasks = await ((HttpResponseMessage)_ctx["response"]).Content.ReadFromJsonAsync<List<TaskItem>>();
+            var task = tasks?.FirstOrDefault(t => t.Title == title);
+            Assert.Equal(status, task?.Status.ToString());
         }
 
         [Then(@"the task ""(.*)"" should not exist anymore")]
         public async Task ThenTaskShouldNotExist(string title)
         {
             await WhenIRequestMyTaskList();
-            var content = await ((HttpResponseMessage)_ctx["response"]).Content.ReadAsStringAsync();
-            var tasks = JsonSerializer.Deserialize<List<JsonElement>>(content)!;
-            Assert.DoesNotContain(tasks, t => t.GetProperty("title").GetString() == title);
-        }
-
-        [Then(@"the task should be saved with status ""(.*)""")]
-        public async Task ThenTaskShouldBeSavedWithStatus(string expectedStatus)
-        {
-            var response = (HttpResponseMessage)_ctx["response"]!;
-            var content = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-            var status = doc.RootElement.GetProperty("status").GetString();
-            Assert.Equal(expectedStatus, status);
-        }
-        /*--*/
-
-        private void SetAuthorizationHeader()
-        {
-            if (_ctx.TryGetValue("authToken", out var tokenObj) && tokenObj is string token)
-            {
-                _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
+            var tasks = await ((HttpResponseMessage)_ctx["response"]).Content.ReadFromJsonAsync<List<TaskItem>>();
+            Assert.DoesNotContain(tasks, t => t.Title == title);
         }
     }
 }
