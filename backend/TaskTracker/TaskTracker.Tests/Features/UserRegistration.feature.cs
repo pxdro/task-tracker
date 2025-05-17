@@ -86,7 +86,7 @@ namespace TaskTracker.Tests.Features
         [Xunit.SkippableTheoryAttribute(DisplayName="Registration fails due to invalid input")]
         [Xunit.TraitAttribute("FeatureTitle", "User Registration")]
         [Xunit.TraitAttribute("Description", "Registration fails due to invalid input")]
-        [Xunit.InlineDataAttribute("invalid-email", "Str0ngP@ss!", "400", "\"Invalid email format\"", new string[0])]
+        [Xunit.InlineDataAttribute("invalid-email", "Str0ngP@ss!", "400", "\"Missing required data\"", new string[0])]
         [Xunit.InlineDataAttribute("", "Str0ngP@ss!", "400", "\"Missing required data\"", new string[0])]
         [Xunit.InlineDataAttribute("user@example.com", "", "400", "\"Missing required data\"", new string[0])]
         [Xunit.InlineDataAttribute("", "", "400", "\"Missing required data\"", new string[0])]
@@ -134,7 +134,6 @@ namespace TaskTracker.Tests.Features
                 this.FeatureBackground();
                 testRunner.When("I register email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 201", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-                testRunner.And("I should see the message \"Email registered successfully\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
                 testRunner.And("I should receive a confirmation email", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();

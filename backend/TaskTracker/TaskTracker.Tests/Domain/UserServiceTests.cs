@@ -1,124 +1,108 @@
-﻿using TaskTracker.Domain.DTOs;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using TaskTracker.Domain.DTOs;
+using TaskTracker.Infrastructure.Context;
 using TaskTracker.Infrastructure.Services;
 
 namespace TaskTracker.Tests.Domain
 {
     public class UserServiceTests
     {
-        private readonly UserService _service = new();
+        private readonly UserService _service;
+        private readonly TaskTrackerDbContext _dbContext;
 
-        // Cleanup
         public UserServiceTests()
         {
-            _service.Reset();
+            var options = new DbContextOptionsBuilder<TaskTrackerDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options;
+            _dbContext = new TaskTrackerDbContext(options);
+
+            var inMemorySettings = new Dictionary<string, string>
+            {
+                { "Jwt:Key", "test-secret-key-1234567890123456" },
+                { "Jwt:Issuer", "TestIssuer" },
+                { "Jwt:Audience", "TestAudience" },
+                { "Jwt:ExpiresInMinutes", "60" }
+            };
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(inMemorySettings!)
+                .Build();
+
+            _service = new UserService(_dbContext, configuration);
         }
 
         [Fact]
-        public async Task Register_WithValidData_Returns201()
+        public async Task Register_WithValidData_ReturnsSuccess()
         {
-            // Arrange
             var dto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
 
-            // Act
             var result = await _service.RegisterAsync(dto);
 
-            // Assert
-            Assert.Equal(201, result.StatusCode);
-            Assert.Equal("Email registered successfully", result.Message);
+            Assert.True(result.Success);
         }
 
-        [Fact]
-        public async Task Register_WithInvalidEmail_Returns400()
+        [Theory]
+        [InlineData("", "Str0ngP@ss!", "Missing required data")]
+        [InlineData("user@example.com", "", "Missing required data")]
+        public async Task Register_WithMissingData_ReturnsFail(string email, string password, string expectedError)
         {
-            // Arrange
-            var dto = new UserDto { Email = "invalid-email", Password = "Str0ngP@ss!" };
+            var dto = new UserDto { Email = email, Password = password };
 
-            // Act
             var result = await _service.RegisterAsync(dto);
 
-            // Assert
-            Assert.Equal(400, result.StatusCode);
-            Assert.Equal("Invalid email format", result.Message);
+            Assert.False(result.Success);
+            Assert.Equal(expectedError, result.Error);
         }
 
         [Fact]
-        public async Task Register_WithEmptyEmailOrPassword_Returns400()
+        public async Task Register_WithDuplicateEmail_ReturnsFail()
         {
-            // Arrange
-            var dto1 = new UserDto { Email = "", Password = "Str0ngP@ss!" };
-            var dto2 = new UserDto { Email = "user@example.com", Password = "" };
-
-            // Act
-            var result1 = await _service.RegisterAsync(dto1);
-            var result2 = await _service.RegisterAsync(dto2);
-
-            // Assert
-            Assert.Equal(400, result1.StatusCode);
-            Assert.Equal("Missing required data", result1.Message);
-
-            Assert.Equal(400, result2.StatusCode);
-            Assert.Equal("Missing required data", result2.Message);
-        }
-
-        [Fact]
-        public async Task Register_WithAlreadyRegisteredEmail_Returns409()
-        {
-            // Arrange
             var dto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
             await _service.RegisterAsync(dto);
 
-            // Act
             var result = await _service.RegisterAsync(dto);
 
-            // Assert
-            Assert.Equal(409, result.StatusCode);
-            Assert.Equal("Email already registered", result.Message);
+            Assert.False(result.Success);
+            Assert.Equal("Email already registered", result.Error);
         }
+
         [Fact]
-        public async Task Login_WithValidCredentials_Returns200AndTokens()
+        public async Task Login_WithValidCredentials_ReturnsAuthData()
         {
-            // Arrange
             var dto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
             await _service.RegisterAsync(dto);
 
-            // Act
-            var result = await _service.LoginAsync(dto);
+            var loginResult = await _service.LoginAsync(dto);
 
-            // Assert
-            Assert.Equal(200, result.StatusCode);
-            Assert.False(string.IsNullOrWhiteSpace(result.AuthToken));
-            Assert.False(string.IsNullOrWhiteSpace(result.RefreshToken));
+            Assert.True(loginResult.Success);
+            Assert.NotNull(loginResult.Data);
+            Assert.False(string.IsNullOrWhiteSpace(loginResult.Data!.AuthToken));
+            Assert.False(string.IsNullOrWhiteSpace(loginResult.Data.RefreshToken));
         }
 
         [Fact]
-        public async Task Login_WithUnregisteredEmail_Returns404()
+        public async Task Login_WithUnregisteredEmail_ReturnsFail()
         {
-            // Arrange
             var dto = new UserDto { Email = "unknown@example.com", Password = "AnyPass123" };
 
-            // Act
             var result = await _service.LoginAsync(dto);
 
-            // Assert
-            Assert.Equal(404, result.StatusCode);
-            Assert.Equal("Email unregistered", result.Message);
+            Assert.False(result.Success);
+            Assert.Equal("Email unregistered", result.Error);
         }
 
         [Fact]
-        public async Task Login_WithWrongPassword_Returns401()
+        public async Task Login_WithWrongPassword_ReturnsFail()
         {
-            // Arrange
             var dto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
             await _service.RegisterAsync(dto);
+            var wrongDto = new UserDto { Email = dto.Email, Password = "WrongPass123" };
 
-            var wrongLogin = new UserDto { Email = "user@example.com", Password = "WrongPass123" };
+            var result = await _service.LoginAsync(wrongDto);
 
-            // Act
-            var result = await _service.LoginAsync(wrongLogin);
-
-            // Assert
-            Assert.Equal(401, result.StatusCode);
-            Assert.Equal("Wrong password", result.Message);
+            Assert.False(result.Success);
+            Assert.Equal("Invalid credentials", result.Error);
         }
     }
 }

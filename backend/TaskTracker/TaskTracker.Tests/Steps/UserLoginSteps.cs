@@ -35,7 +35,8 @@ namespace TaskTracker.Tests.Steps
             var response = (HttpResponseMessage)_ctx["response"]!;
             var content = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(content);
-            Assert.True(doc.RootElement.TryGetProperty("authToken", out _));
+            Assert.True(doc.RootElement.TryGetProperty("authToken", out var token));
+            Assert.False(string.IsNullOrWhiteSpace(token.GetString()));
         }
 
         [Then(@"I should receive a valid refresh token")]
@@ -44,7 +45,8 @@ namespace TaskTracker.Tests.Steps
             var response = (HttpResponseMessage)_ctx["response"]!;
             var content = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(content);
-            Assert.True(doc.RootElement.TryGetProperty("refreshToken", out _));
+            Assert.True(doc.RootElement.TryGetProperty("refreshToken", out var token));
+            Assert.False(string.IsNullOrWhiteSpace(token.GetString()));
         }
     }
 }

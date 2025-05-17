@@ -127,7 +127,7 @@ namespace TaskTracker.Tests.Features
                 this.ScenarioStart();
                 this.FeatureBackground();
                 testRunner.When("I login with email \"unknown@example.com\" and password \"AnyPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should be returned code 404", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should be returned code 401", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("I should see the message \"Email unregistered\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
@@ -153,7 +153,7 @@ namespace TaskTracker.Tests.Features
                 testRunner.Given("I have registered with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
                 testRunner.When("I login with email \"user@example.com\" and password \"WrongPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 401", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-                testRunner.And("I should see the message \"Wrong password\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+                testRunner.And("I should see the message \"Invalid credentials\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }

@@ -1,22 +1,49 @@
 using Microsoft.AspNetCore.Http.Json;
-using Microsoft.AspNetCore.Identity.Data;
+using Microsoft.AspNetCore.Identity;
+using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using TaskTracker.Domain.DTOs;
 using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Enums;
 using TaskTracker.Domain.Interfaces;
 using TaskTracker.Infrastructure.Services;
+using TaskTracker.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add context to the container (only if it's not Testing env)
+var isTesting = builder.Environment.EnvironmentName == "Testing";
+if (!isTesting)
+{
+    builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+}
 
+// Add JWT Auth settings
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? string.Empty);
+
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(key)
+        };
+    });
+
+// Add services to the container.
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddSingleton<IUserService, UserService>();
-builder.Services.AddSingleton<ITaskService, TaskService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 
 // Ensure Enums return names instead of numbers
 builder.Services.Configure<JsonOptions>(options =>
@@ -39,31 +66,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapGet("/api/ping", () => "ok");
-
-app.MapPost("/api/auth/register", async (UserDto dto, IUserService userService, HttpContext context) =>
-{
-    var userResultDto = await userService.RegisterAsync(dto);
-
-    if (userResultDto.StatusCode == 201)
-        context.Response.Headers["X-Confirmation-Sent"] = "true";
-
-    return Results.Json(new { message = userResultDto.Message }, statusCode: userResultDto.StatusCode);
-});
-
-app.MapPost("/api/auth/login", async (UserDto dto, IUserService userService, HttpContext context) =>
-{
-    var userResultDto = await userService.LoginAsync(dto);
-
-    return userResultDto.StatusCode switch
-    {
-        200 => Results.Json(new
-        {
-            authToken = userResultDto.AuthToken,
-            refreshToken = userResultDto.RefreshToken
-        }),
-        _ => Results.Json(new { message = userResultDto.Message }, statusCode: userResultDto.StatusCode)
-    };
-});
 
 app.MapGet("/api/tasks", (HttpContext http, string? field, string? value, ITaskService taskService) =>
 {

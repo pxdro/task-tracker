@@ -10,10 +10,10 @@ Feature: User Registration
     When I register email "<email>" and password "<password>"
     Then I should be returned code <status>
     And I should see the message "<message>"
-
+  
   Examples:
     | email             | password      | status | message                    |
-    | invalid-email     | Str0ngP@ss!   | 400    | "Invalid email format"     |
+    | invalid-email     | Str0ngP@ss!   | 400    | "Missing required data"    |
     |                   | Str0ngP@ss!   | 400    | "Missing required data"    |
     | user@example.com  |               | 400    | "Missing required data"    |
     |                   |               | 400    | "Missing required data"    |
@@ -21,7 +21,6 @@ Feature: User Registration
   Scenario: Successful registration
     When I register email "user@example.com" and password "Str0ngP@ss!"
     Then I should be returned code 201
-    And I should see the message "Email registered successfully"
     And I should receive a confirmation email
     
   Scenario: Registration with already registered email

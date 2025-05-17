@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using TechTalk.SpecFlow;
 
 namespace TaskTracker.Tests.Steps
@@ -39,7 +40,18 @@ namespace TaskTracker.Tests.Steps
         {
             var response = (HttpResponseMessage)_ctx["response"]!;
             var content = await response.Content.ReadAsStringAsync();
-            Assert.Contains(expectedMessage, content);
+
+            if (response.Content.Headers.ContentType?.MediaType == "application/json")
+            {
+                var json = JsonDocument.Parse(content);
+                if (json.RootElement.TryGetProperty("error", out var errorProp))
+                {
+                    Assert.Equal(expectedMessage.Trim('"'), errorProp.GetString());
+                    return;
+                }
+            }
+
+            Assert.Contains(expectedMessage.Trim('"'), content);
         }
     }
 }
