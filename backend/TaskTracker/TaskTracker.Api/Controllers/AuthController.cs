@@ -24,7 +24,7 @@ namespace TaskTracker.Api.Controllers
 
             return result.ErrorMessage switch
             {
-                "Email already registered" => Conflict(new { error = result.ErrorMessage }),
+                "Email already registered" => Conflict(result.ErrorMessage),
                 _ => StatusCode(500),
             };
         }
@@ -42,8 +42,8 @@ namespace TaskTracker.Api.Controllers
 
             return result.ErrorMessage switch
             {
-                "Email unregistered" => BadRequest(new { error = result.ErrorMessage }),
-                "Invalid credentials" => Unauthorized(new { error = result.ErrorMessage }),
+                "Email unregistered" => BadRequest(result.ErrorMessage),
+                "Invalid credentials" => Unauthorized(result.ErrorMessage),
                 _ => StatusCode(500),
             };
         }
@@ -62,8 +62,8 @@ namespace TaskTracker.Api.Controllers
 
             return result.ErrorMessage switch
             {
-                "Invalid user ID in token" => Unauthorized(new { error = result.ErrorMessage }),
-                "Invalid credentials" => Unauthorized(new { error = result.ErrorMessage }),
+                "Invalid user ID in token" => NotFound(result.ErrorMessage),
+                "Invalid credentials" => Unauthorized(result.ErrorMessage),
                 _ => StatusCode(500),
             };
         }
