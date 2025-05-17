@@ -1,7 +1,4 @@
-using Microsoft.AspNetCore.Http.Json;
-using Microsoft.AspNetCore.Identity;
 using System.Text;
-using System.Text.Json.Serialization;
 using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Enums;
 using TaskTracker.Domain.Interfaces;
@@ -9,6 +6,7 @@ using TaskTracker.Infrastructure.Services;
 using TaskTracker.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,35 +19,47 @@ if (!isTesting)
 }
 
 // Add JWT Auth settings
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? string.Empty);
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var key = Encoding.UTF8.GetBytes(jwtSettings["AuthKey"]!);
 
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.TokenValidationParameters = new TokenValidationParameters
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ClockSkew = TimeSpan.FromMinutes(double.Parse(jwtSettings["ClockSkew"]!))
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings["Issuer"],
-            ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(key)
-        };
-    });
+            if (context.Exception is SecurityTokenExpiredException)
+            {
+                context.Response.Headers.Append("Token-Expired", "true");
+            }
+            return Task.CompletedTask;
+        }
+    };
+});
 
 // Add services to the container.
+builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
-
-// Ensure Enums return names instead of numbers
-builder.Services.Configure<JsonOptions>(options =>
-{
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-});
 
 var app = builder.Build();
 
@@ -106,9 +116,3 @@ app.MapDelete("api/tasks/", (HttpContext http, string title, ITaskService taskSe
 app.Run();
 
 public partial class Program { }
-
-static class ResultExtensions
-{
-    public static IResult WithMessage(this IResult result, string message)
-        => Results.Json(new { message }, statusCode: ((IStatusCodeHttpResult)result).StatusCode ?? 500);
-}

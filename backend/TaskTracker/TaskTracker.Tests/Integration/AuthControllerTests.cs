@@ -74,7 +74,7 @@ namespace TaskTracker.Tests.Integration
             var response = await client.PostAsJsonAsync("/api/auth/login", loginDto);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var auth = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
+            var auth = await response.Content.ReadFromJsonAsync<TokensDto>();
             Assert.False(string.IsNullOrWhiteSpace(auth.AuthToken));
             Assert.False(string.IsNullOrWhiteSpace(auth.RefreshToken));
         }

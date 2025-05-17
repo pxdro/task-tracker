@@ -6,12 +6,12 @@ using TaskTracker.Infrastructure.Services;
 
 namespace TaskTracker.Tests.Domain
 {
-    public class UserServiceTests
+    public class AuthServiceTests
     {
-        private readonly UserService _service;
+        private readonly AuthService _service;
         private readonly TaskTrackerDbContext _dbContext;
 
-        public UserServiceTests()
+        public AuthServiceTests()
         {
             var options = new DbContextOptionsBuilder<TaskTrackerDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -29,7 +29,7 @@ namespace TaskTracker.Tests.Domain
                 .AddInMemoryCollection(inMemorySettings!)
                 .Build();
 
-            _service = new UserService(_dbContext, configuration);
+            _service = new AuthService(_dbContext, configuration);
         }
 
         [Fact]

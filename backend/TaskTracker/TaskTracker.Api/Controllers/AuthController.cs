@@ -8,35 +8,64 @@ namespace TaskTracker.Api.Controllers
     [ApiController]
     [Route("api/auth")]
     [AllowAnonymous]
-    public class AuthController(IUserService userService) : ControllerBase
+    public class AuthController(IAuthService authService) : ControllerBase
     {
-        private readonly IUserService _userService = userService;
+        private readonly IAuthService _authService = authService;
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserDto dto)
+        public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
-            var result = await _userService.RegisterAsync(dto);
-            if (result.Success)
+            var result = await _authService.RegisterAsync(registerDto);
+            if (result.IsSuccess)
             {
                 Response.Headers["X-Confirmation-Sent"] = "true";
                 return CreatedAtAction(nameof(Register), null);
             }
 
-            return result.Error switch
+            return result.ErrorMessage switch
             {
-                "Email already registered" => Conflict(new { error = result.Error }),
-                _ => BadRequest(new { error = result.Error })
+                "Email already registered" => Conflict(new { error = result.ErrorMessage }),
+                _ => StatusCode(500),
             };
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserDto dto)
+        public async Task<IActionResult> Login([FromBody] RegisterDto registerDto)
         {
-            var result = await _userService.LoginAsync(dto);
-            if (result.Success)
+            var result = await _authService.LoginAsync(registerDto);
+            if (result.IsSuccess)
+            {
+                Response.Headers["X-Auth-Token"] = result.Data?.AuthToken;
+                Response.Headers["X-Refresh-Token"] = result.Data?.RefreshToken;
                 return Ok(result.Data);
+            }
 
-            return Unauthorized(new { error = result.Error });
+            return result.ErrorMessage switch
+            {
+                "Email unregistered" => BadRequest(new { error = result.ErrorMessage }),
+                "Invalid credentials" => Unauthorized(new { error = result.ErrorMessage }),
+                _ => StatusCode(500),
+            };
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshToken([FromBody] TokensDto tokensDto)
+        {
+            var result = await _authService.RefreshTokenAsync(tokensDto);
+
+            if (result.IsSuccess)
+            {
+                Response.Headers["X-Auth-Token"] = result.Data?.AuthToken;
+                Response.Headers["X-Refresh-Token"] = result.Data?.RefreshToken;
+                return Ok(result.Data);
+            }
+
+            return result.ErrorMessage switch
+            {
+                "Invalid user ID in token" => Unauthorized(new { error = result.ErrorMessage }),
+                "Invalid credentials" => Unauthorized(new { error = result.ErrorMessage }),
+                _ => StatusCode(500),
+            };
         }
     }
 }
