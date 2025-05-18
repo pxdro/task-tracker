@@ -13,59 +13,36 @@ namespace TaskTracker.Api.Controllers
         private readonly IAuthService _authService = authService;
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
+        public async Task<IActionResult> Register([FromBody] UserRequestDto registerDto)
         {
             var result = await _authService.RegisterAsync(registerDto);
             if (result.IsSuccess)
-            {
                 Response.Headers["X-Confirmation-Sent"] = "true";
-                return CreatedAtAction(nameof(Register), null);
-            }
-
-            return result.ErrorMessage switch
-            {
-                "Email already registered" => Conflict(result.ErrorMessage),
-                _ => StatusCode(500),
-            };
+            return StatusCode((int)result.StatusCode, result);
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] RegisterDto registerDto)
+        public async Task<IActionResult> Login([FromBody] UserRequestDto registerDto)
         {
             var result = await _authService.LoginAsync(registerDto);
             if (result.IsSuccess)
             {
                 Response.Headers["X-Auth-Token"] = result.Data?.AuthToken;
                 Response.Headers["X-Refresh-Token"] = result.Data?.RefreshToken;
-                return Ok(result.Data);
             }
-
-            return result.ErrorMessage switch
-            {
-                "Email unregistered" => BadRequest(result.ErrorMessage),
-                "Invalid credentials" => Unauthorized(result.ErrorMessage),
-                _ => StatusCode(500),
-            };
+            return StatusCode((int)result.StatusCode, result);
         }
 
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshToken([FromBody] TokensDto tokensDto)
         {
             var result = await _authService.RefreshTokenAsync(tokensDto);
-
             if (result.IsSuccess)
             {
                 Response.Headers["X-Auth-Token"] = result.Data?.AuthToken;
                 Response.Headers["X-Refresh-Token"] = result.Data?.RefreshToken;
-                return Ok(result.Data);
             }
-
-            return result.ErrorMessage switch
-            {
-                "Invalid user ID in token" => NotFound(result.ErrorMessage),
-                "Invalid credentials" => Unauthorized(result.ErrorMessage),
-                _ => StatusCode(500),
-            };
+            return StatusCode((int)result.StatusCode, result);
         }
     }
 }

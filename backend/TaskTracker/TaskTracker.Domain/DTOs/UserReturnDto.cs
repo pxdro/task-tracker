@@ -1,6 +1,6 @@
 ﻿namespace TaskTracker.Domain.DTOs
 {
-    public class UserDto
+    public class UserReturnDto
     {
         public string Email { get; set; }
     }

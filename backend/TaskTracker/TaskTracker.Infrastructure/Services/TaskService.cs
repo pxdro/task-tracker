@@ -1,93 +1,171 @@
-﻿using TaskTracker.Domain.Entities;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using System.Net;
+using TaskTracker.Domain.DTOs;
+using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Enums;
 using TaskTracker.Domain.Interfaces;
+using TaskTracker.Infrastructure.Context;
 
 namespace TaskTracker.Infrastructure.Services
 {
-    public class TaskService : ITaskService
+    public class TaskService(TaskTrackerDbContext context, IMapper mapper) : ITaskService
     {
-        private readonly Dictionary<string, List<TaskItem>> _db = [];
+        private readonly TaskTrackerDbContext _context = context;
+        private readonly IMapper _mapper = mapper;
 
-        public Task<List<TaskItem>> GetAll(string userEmail, string? field = null, string? value = null)
+        public async Task<ResultDto<IEnumerable<TaskReturnDto>>> GetAllTasksAsync(Guid userId)
         {
-            if (!_db.TryGetValue(userEmail, out List<TaskItem>? tasks))
-                return Task.FromResult(new List<TaskItem>());
-
-            _ = Enum.TryParse(value, out EnumTaskStatus valueEnum);
-            return field?.ToLower() switch
+            try
             {
-                null => Task.FromResult(tasks),
-                "title" => Task.FromResult(
-                    value == null ? tasks.Where(t => t.Title == null).ToList()
-                        : tasks.Where(t => t.Title != null && t.Title.Contains(value, StringComparison.CurrentCultureIgnoreCase)).ToList()),
-                "description" => Task.FromResult(
-                    value == null ? tasks.Where(t => t.Description == null).ToList()
-                        : tasks.Where(t => t.Description != null && t.Description.Contains(value, StringComparison.CurrentCultureIgnoreCase)).ToList()),
-                "status" => Task.FromResult(tasks.Where(t => t.Status == valueEnum).ToList()),
-                _ => Task.FromResult(new List<TaskItem>())
-            };
-        }
-
-        public Task<TaskItem?> FirstOrDefault(string userEmail, string? field, string? value)
-        {
-            if (!_db.TryGetValue(userEmail, out List<TaskItem>? tasks))
-                return Task.FromResult(default(TaskItem?));
-
-            _ = Enum.TryParse(value, out EnumTaskStatus valueEnum);
-            return field.ToLower() switch
+                var tasks = await _context.Tasks.Where(t => t.UserId == userId).ToListAsync();
+                return ResultDto<IEnumerable<TaskReturnDto>>.Success(
+                    _mapper.Map<IEnumerable<TaskReturnDto>>(tasks),
+                    HttpStatusCode.OK
+                );
+            }
+            catch (Exception ex)
             {
-                "title" => Task.FromResult(
-                    value == null ? tasks.FirstOrDefault(t => t.Title == null)
-                        : tasks.FirstOrDefault(t => t.Title != null && t.Title.Contains(value, StringComparison.CurrentCultureIgnoreCase))),
-                "description" => Task.FromResult(
-                    value == null ? tasks.FirstOrDefault(t => t.Description == null)
-                        : tasks.FirstOrDefault(t => t.Description != null && t.Description.Contains(value, StringComparison.CurrentCultureIgnoreCase))),
-                "status" => Task.FromResult(tasks.FirstOrDefault(t => t.Status == valueEnum)),
-                _ => Task.FromResult(default(TaskItem?))
-            };
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<IEnumerable<TaskReturnDto>>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
         }
 
-        public Task<TaskItem> Add(string userEmail, TaskItem task)
+        public async Task<ResultDto<TaskReturnDto>> GetTaskByIdAsync(Guid taskId, Guid userId)
         {
-            if (!_db.ContainsKey(userEmail))
-                _db[userEmail] = [];
+            try
+            {
+                var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
+                var userOk = task?.UserId == userId;
 
-            _db[userEmail].Add(task);
-            return Task.FromResult(task);
+                if (task == null)
+                    return ResultDto<TaskReturnDto>.Failure("Tasks not found", HttpStatusCode.NotFound);
+                else if (!userOk)
+                    return ResultDto<TaskReturnDto>.Failure("Access denied", HttpStatusCode.Unauthorized);
+                else
+                    return ResultDto<TaskReturnDto>.Success(_mapper.Map<TaskReturnDto>(task), HttpStatusCode.OK);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<TaskReturnDto>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
         }
 
-        public Task<TaskItem?> Update(string userEmail, string title, TaskItem newTask)
+        public async Task<ResultDto<TaskReturnDto>> CreateTaskAsync(TaskRequestDto taskRequestDto, Guid userId)
         {
-            var task = FirstOrDefault(userEmail, "title", title)?.Result;
-            if (task == null) return Task.FromResult(task);
+            try
+            {
+                TaskItem task = _mapper.Map<TaskItem>(taskRequestDto);
+                task.UserId = userId;
+                task.CreatedAt = DateTime.UtcNow;
+                task.UpdatedAt = DateTime.UtcNow;
 
-            task.Title = newTask.Title;
-            task.Description = newTask.Description;
-            task.Status = newTask.Status;
+                await _context.Tasks.AddAsync(task);
+                await _context.SaveChangesAsync();
 
-            return Task.FromResult(task);
+                return ResultDto<TaskReturnDto>.Success(_mapper.Map<TaskReturnDto>(task), HttpStatusCode.Created);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<TaskReturnDto>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
         }
 
-        public Task<TaskItem?> ChangeStatus(string userEmail, string title, EnumTaskStatus status)
+        public async Task<ResultDto<TaskReturnDto>> UpdateTaskAsync(Guid taskId, TaskRequestDto taskRequestDto, Guid userId)
         {
-            var task = FirstOrDefault(userEmail, "title", title)?.Result;
-            if (task == null) return Task.FromResult(task);
+            try
+            {
+                TaskItem? task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
+                bool userOk = task?.UserId == userId;
 
-            task.Status = status;
+                if (task == null)
+                    return ResultDto<TaskReturnDto>.Failure("Tasks not found", HttpStatusCode.NotFound);
+                else if (!userOk)
+                    return ResultDto<TaskReturnDto>.Failure("Access denied", HttpStatusCode.Unauthorized);
 
-            return Task.FromResult(task);
+                task.Title = taskRequestDto.Title;
+                task.Description = taskRequestDto.Description;
+                task.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                return ResultDto<TaskReturnDto>.Success(_mapper.Map<TaskReturnDto>(task), HttpStatusCode.OK);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<TaskReturnDto>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
         }
 
-        public Task<bool> Delete(string userEmail, string title)
+        public async Task<ResultDto<TaskReturnDto>> ChangeTaskStatusAsync(Guid taskId, Guid userId, EnumTaskStatus newStatus)
         {
-            var task = FirstOrDefault(userEmail, "title", title)?.Result;
-            if (task == null) return Task.FromResult(false);
+            try
+            {
+                TaskItem? task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
+                bool userOk = task?.UserId == userId;
 
-            _db[userEmail].Remove(task);
-            return Task.FromResult(true);
+                if (task == null)
+                    return ResultDto<TaskReturnDto>.Failure("Tasks not found", HttpStatusCode.NotFound);
+                else if (!userOk)
+                    return ResultDto<TaskReturnDto>.Failure("Access denied", HttpStatusCode.Unauthorized);
+
+                task.Status = newStatus;
+                task.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                return ResultDto<TaskReturnDto>.Success(_mapper.Map<TaskReturnDto>(task), HttpStatusCode.OK);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<TaskReturnDto>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
         }
-        
-        public void Reset() => _db.Clear();
 
+        public async Task<ResultDto<bool>> DeleteTaskAsync(Guid taskId, Guid userId)
+        {
+            try
+            {
+                TaskItem? task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
+                bool userOk = task?.UserId == userId;
+
+                if (task == null)
+                    return ResultDto<bool>.Failure("Tasks not found", HttpStatusCode.NotFound);
+                else if (!userOk)
+                    return ResultDto<bool>.Failure("Access denied", HttpStatusCode.Unauthorized);
+
+                _context.Tasks.Remove(task);
+                await _context.SaveChangesAsync();
+
+                return ResultDto<bool>.Success(true, HttpStatusCode.NoContent);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<bool>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace TaskTracker.Domain.DTOs
 {
-    public class RegisterDto
+    public class UserRequestDto
     {
         [Required][EmailAddress]
         public string Email { get; set; }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -20,59 +21,92 @@ namespace TaskTracker.Infrastructure.Services
         private readonly TaskTrackerDbContext _dbContext = dbContext;
         private readonly IConfiguration _configuration = configuration;
 
-        public async Task<ResultDto<UserDto>> RegisterAsync(RegisterDto registerDto)
+        public async Task<ResultDto<UserReturnDto>> RegisterAsync(UserRequestDto registerDto)
         {
-            if (await _dbContext.Users.AnyAsync(u => u.Email == registerDto.Email))
-                return ResultDto<UserDto>.Fail("Email already registered");
-
-            var user = new User
+            try
             {
-                Email = registerDto.Email,
-                PasswordHash = HashPassword(registerDto.Password)
-            };
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
+                if (await _dbContext.Users.AnyAsync(u => u.Email == registerDto.Email))
+                    return ResultDto<UserReturnDto>.Failure("Email already registered", HttpStatusCode.Forbidden);
 
-            return ResultDto<UserDto>.Ok(new UserDto { Email = registerDto.Email });
+                var user = new User
+                {
+                    Email = registerDto.Email,
+                    PasswordHash = HashPassword(registerDto.Password)
+                };
+                _dbContext.Users.Add(user);
+                await _dbContext.SaveChangesAsync();
+
+                return ResultDto<UserReturnDto>.Success(new UserReturnDto { Email = registerDto.Email }, HttpStatusCode.Created);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<UserReturnDto>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
         }
 
-        public async Task<ResultDto<TokensDto>> LoginAsync(RegisterDto registerDto)
+        public async Task<ResultDto<TokensDto>> LoginAsync(UserRequestDto registerDto)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == registerDto.Email);
-            if (user == null)
-                return ResultDto<TokensDto>.Fail("Email unregistered");
+            try
+            {
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == registerDto.Email);
+                if (user == null)
+                    return ResultDto<TokensDto>.Failure("Email unregistered", HttpStatusCode.NotFound);
 
-            if (!VerifyPassword(registerDto.Password, user.PasswordHash))
-                return ResultDto<TokensDto>.Fail("Invalid credentials");
+                if (!VerifyPassword(registerDto.Password, user.PasswordHash))
+                    return ResultDto<TokensDto>.Failure("Invalid credentials", HttpStatusCode.Unauthorized);
 
-            var tokensDto = GenerateTokens(user);
-            var jwtSettings = _configuration.GetSection("JwtSettings");
-            user.RefreshToken = tokensDto.RefreshToken!;
-            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(double.Parse(jwtSettings["RefreshTokenExpirationDays"]!));
-            await _dbContext.SaveChangesAsync(); 
-            return ResultDto<TokensDto>.Ok(tokensDto);
+                var tokensDto = GenerateTokens(user);
+                var jwtSettings = _configuration.GetSection("JwtSettings");
+                user.RefreshToken = tokensDto.RefreshToken!;
+                user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(double.Parse(jwtSettings["RefreshTokenExpirationDays"]!));
+                await _dbContext.SaveChangesAsync();
+                return ResultDto<TokensDto>.Success(tokensDto, HttpStatusCode.OK);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<TokensDto>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
         }
 
         public async Task<ResultDto<TokensDto>> RefreshTokenAsync(TokensDto tokensDto)
         {
-            var principal = GetPrincipalFromExpiredToken(tokensDto.AuthToken!);
-            var userId = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            try
+            {
+                var principal = GetPrincipalFromExpiredToken(tokensDto.AuthToken!);
+                var userId = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (!Guid.TryParse(userId, out var userGuid))
-                return ResultDto<TokensDto>.Fail("Invalid user ID in token");
+                if (!Guid.TryParse(userId, out var userGuid))
+                    return ResultDto<TokensDto>.Failure("Invalid user ID in token", HttpStatusCode.BadRequest);
 
-            var user = await _dbContext.Users
-                .FirstOrDefaultAsync(u => u.Id == userGuid);
+                var user = await _dbContext.Users
+                    .FirstOrDefaultAsync(u => u.Id == userGuid);
 
-            if (user == null || user.RefreshToken != tokensDto.RefreshToken || user.RefreshTokenExpiry < DateTime.UtcNow)
-                return ResultDto<TokensDto>.Fail("Invalid refresh token");
+                if (user == null || user.RefreshToken != tokensDto.RefreshToken || user.RefreshTokenExpiry < DateTime.UtcNow)
+                    return ResultDto<TokensDto>.Failure("Invalid refresh token", HttpStatusCode.Unauthorized);
 
-            var newTokensDto = GenerateTokens(user);
-            var jwtSettings = _configuration.GetSection("JwtSettings");
-            user.RefreshToken = newTokensDto.RefreshToken!;
-            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(double.Parse(jwtSettings["RefreshTokenExpirationDays"]!));
-            await _dbContext.SaveChangesAsync();
-            return ResultDto<TokensDto>.Ok(newTokensDto);
+                var newTokensDto = GenerateTokens(user);
+                var jwtSettings = _configuration.GetSection("JwtSettings");
+                user.RefreshToken = newTokensDto.RefreshToken!;
+                user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(double.Parse(jwtSettings["RefreshTokenExpirationDays"]!));
+                await _dbContext.SaveChangesAsync();
+                return ResultDto<TokensDto>.Success(newTokensDto, HttpStatusCode.OK);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Server error");
+                return ResultDto<TokensDto>.Failure(
+                    "Server error",
+                    HttpStatusCode.InternalServerError
+                );
+            }
         }
 
         private TokensDto GenerateTokens(User user)
@@ -134,6 +168,7 @@ namespace TaskTracker.Infrastructure.Services
             return principal;
         }
 
+        // Argon2id For Password Hashing
         private static string HashPassword(string password)
         {
             var salt = RandomNumberGenerator.GetBytes(16);

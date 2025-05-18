@@ -37,7 +37,7 @@ namespace TaskTracker.Tests.Integration
         public async Task Register_ReturnsCreated_WhenValidUser()
         {
             var client = _factory.CreateClient();
-            var dto = new UserDto { Email = "test@example.com", Password = "Password123!" };
+            var dto = new UserReturnDto { Email = "test@example.com", Password = "Password123!" };
 
             var response = await client.PostAsJsonAsync("/api/auth/register", dto);
 
@@ -49,7 +49,7 @@ namespace TaskTracker.Tests.Integration
         public async Task Register_ReturnsConflict_WhenEmailAlreadyRegistered()
         {
             var client = _factory.CreateClient();
-            var dto = new UserDto { Email = "dup@example.com", Password = "Password123!" };
+            var dto = new UserReturnDto { Email = "dup@example.com", Password = "Password123!" };
 
             // First registration
             var response1 = await client.PostAsJsonAsync("/api/auth/register", dto);
@@ -67,10 +67,10 @@ namespace TaskTracker.Tests.Integration
         public async Task Login_ReturnsOk_WithTokens_WhenCredentialsValid()
         {
             var client = _factory.CreateClient();
-            var registerDto = new UserDto { Email = "login@example.com", Password = "Password123!" };
+            var registerDto = new UserReturnDto { Email = "login@example.com", Password = "Password123!" };
             await client.PostAsJsonAsync("/api/auth/register", registerDto);
 
-            var loginDto = new UserDto { Email = "login@example.com", Password = "Password123!" };
+            var loginDto = new UserReturnDto { Email = "login@example.com", Password = "Password123!" };
             var response = await client.PostAsJsonAsync("/api/auth/login", loginDto);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -83,7 +83,7 @@ namespace TaskTracker.Tests.Integration
         public async Task Login_ReturnsUnauthorized_WhenEmailNotRegistered()
         {
             var client = _factory.CreateClient();
-            var loginDto = new UserDto { Email = "noexist@example.com", Password = "AnyPassword" };
+            var loginDto = new UserReturnDto { Email = "noexist@example.com", Password = "AnyPassword" };
 
             var response = await client.PostAsJsonAsync("/api/auth/login", loginDto);
 
@@ -96,10 +96,10 @@ namespace TaskTracker.Tests.Integration
         public async Task Login_ReturnsUnauthorized_WhenPasswordInvalid()
         {
             var client = _factory.CreateClient();
-            var registerDto = new UserDto { Email = "user@example.com", Password = "CorrectPass1!" };
+            var registerDto = new UserReturnDto { Email = "user@example.com", Password = "CorrectPass1!" };
             await client.PostAsJsonAsync("/api/auth/register", registerDto);
 
-            var loginDto = new UserDto { Email = "user@example.com", Password = "WrongPass" };
+            var loginDto = new UserReturnDto { Email = "user@example.com", Password = "WrongPass" };
             var response = await client.PostAsJsonAsync("/api/auth/login", loginDto);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

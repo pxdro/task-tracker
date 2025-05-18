@@ -35,7 +35,7 @@ namespace TaskTracker.Tests.Domain
         [Fact]
         public async Task Register_WithValidData_ReturnsSuccess()
         {
-            var dto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
+            var dto = new UserReturnDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
 
             var result = await _service.RegisterAsync(dto);
 
@@ -47,7 +47,7 @@ namespace TaskTracker.Tests.Domain
         [InlineData("user@example.com", "", "Missing required data")]
         public async Task Register_WithMissingData_ReturnsFail(string email, string password, string expectedError)
         {
-            var dto = new UserDto { Email = email, Password = password };
+            var dto = new UserReturnDto { Email = email, Password = password };
 
             var result = await _service.RegisterAsync(dto);
 
@@ -58,7 +58,7 @@ namespace TaskTracker.Tests.Domain
         [Fact]
         public async Task Register_WithDuplicateEmail_ReturnsFail()
         {
-            var dto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
+            var dto = new UserReturnDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
             await _service.RegisterAsync(dto);
 
             var result = await _service.RegisterAsync(dto);
@@ -70,7 +70,7 @@ namespace TaskTracker.Tests.Domain
         [Fact]
         public async Task Login_WithValidCredentials_ReturnsAuthData()
         {
-            var dto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
+            var dto = new UserReturnDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
             await _service.RegisterAsync(dto);
 
             var loginResult = await _service.LoginAsync(dto);
@@ -84,7 +84,7 @@ namespace TaskTracker.Tests.Domain
         [Fact]
         public async Task Login_WithUnregisteredEmail_ReturnsFail()
         {
-            var dto = new UserDto { Email = "unknown@example.com", Password = "AnyPass123" };
+            var dto = new UserReturnDto { Email = "unknown@example.com", Password = "AnyPass123" };
 
             var result = await _service.LoginAsync(dto);
 
@@ -95,9 +95,9 @@ namespace TaskTracker.Tests.Domain
         [Fact]
         public async Task Login_WithWrongPassword_ReturnsFail()
         {
-            var dto = new UserDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
+            var dto = new UserReturnDto { Email = "user@example.com", Password = "Str0ngP@ss!" };
             await _service.RegisterAsync(dto);
-            var wrongDto = new UserDto { Email = dto.Email, Password = "WrongPass123" };
+            var wrongDto = new UserReturnDto { Email = dto.Email, Password = "WrongPass123" };
 
             var result = await _service.LoginAsync(wrongDto);
 

@@ -13,6 +13,7 @@ namespace TaskTracker.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public string RefreshToken { get; set; } = string.Empty;
+
         public DateTime? RefreshTokenExpiry { get; set; }
     }
 }

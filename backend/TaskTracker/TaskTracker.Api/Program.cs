@@ -1,12 +1,10 @@
-using System.Text;
-using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Enums;
-using TaskTracker.Domain.Interfaces;
-using TaskTracker.Infrastructure.Services;
-using TaskTracker.Infrastructure.Context;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
+using TaskTracker.Domain.Interfaces;
+using TaskTracker.Infrastructure.Context;
+using TaskTracker.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,10 +53,11 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Add services to the container.
-builder.Services.AddAuthorization();
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddAuthorization();                // Auth
+builder.Services.AddControllers();                  // Controllers
+builder.Services.AddEndpointsApiExplorer();         // Swagger
+builder.Services.AddSwaggerGen();                   // Swagger
+builder.Services.AddAutoMapper(typeof(Program));    // AutoMapper
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 
@@ -78,42 +77,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapGet("/api/ping", () => "ok");
-
-app.MapGet("/api/tasks", (HttpContext http, string? field, string? value, ITaskService taskService) =>
-{
-    var user = http.User.Identity?.Name ?? "user@example.com";
-    Task<List<TaskItem>> result;
-    result = taskService.GetAll(user, field, value);
-    return Results.Json(result.Result);
-});
-
-app.MapPost("/api/tasks", (HttpContext http, TaskItem task, ITaskService taskService) =>
-{
-    var user = http.User.Identity?.Name ?? "user@example.com";
-    var response = taskService.Add(user, task);
-    return Results.Json(response.Result);
-});
-
-app.MapPut("/api/tasks", (HttpContext http, string title, TaskItem task, ITaskService taskService) =>
-{
-    var user = http.User.Identity?.Name ?? "user@example.com";
-    var updated = taskService.Update(user, title, task);
-    return updated is null ? Results.NotFound() : Results.Json(updated.Result);
-});
-
-app.MapPatch("/api/tasks/{title}", async (string title, EnumTaskStatus status, HttpContext http, ITaskService taskService) =>
-{
-    var user = http.User.Identity?.Name ?? "user@example.com";
-    var updated = await taskService.ChangeStatus(user, title, status);
-    return updated is null ? Results.NotFound() : Results.Json(updated);
-});
-
-app.MapDelete("api/tasks/", (HttpContext http, string title, ITaskService taskService) =>
-{
-    var user = http.User.Identity?.Name ?? "user@example.com";
-    var success = taskService.Delete(user, title);
-    return success.Result ? Results.NoContent() : Results.NotFound();
-});
 
 app.Run();
 
