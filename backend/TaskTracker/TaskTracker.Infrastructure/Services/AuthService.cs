@@ -15,9 +15,11 @@ using TaskTracker.Infrastructure.Context;
 namespace TaskTracker.Infrastructure.Services
 {
     public class AuthService(
+        IPasswordHasherService passwordHasher,
         TaskTrackerDbContext dbContext,
         IConfiguration configuration) : IAuthService
     {
+        private readonly IPasswordHasherService _passwordHasher = passwordHasher;
         private readonly TaskTrackerDbContext _dbContext = dbContext;
         private readonly IConfiguration _configuration = configuration;
 
@@ -31,7 +33,7 @@ namespace TaskTracker.Infrastructure.Services
                 var user = new User
                 {
                     Email = registerDto.Email,
-                    PasswordHash = HashPassword(registerDto.Password)
+                    PasswordHash = _passwordHasher.Hash(registerDto.Password)
                 };
                 _dbContext.Users.Add(user);
                 await _dbContext.SaveChangesAsync();
@@ -56,7 +58,7 @@ namespace TaskTracker.Infrastructure.Services
                 if (user == null)
                     return ResultDto<TokensDto>.Failure("Email unregistered", HttpStatusCode.NotFound);
 
-                if (!VerifyPassword(registerDto.Password, user.PasswordHash))
+                if (!_passwordHasher.Verify(registerDto.Password, user.PasswordHash))
                     return ResultDto<TokensDto>.Failure("Invalid credentials", HttpStatusCode.Unauthorized);
 
                 var tokensDto = GenerateTokens(user);
@@ -80,14 +82,22 @@ namespace TaskTracker.Infrastructure.Services
         {
             try
             {
-                var principal = GetPrincipalFromExpiredToken(tokensDto.AuthToken!);
+                var principal = new ClaimsPrincipal();
+                try
+                {
+                    principal = GetPrincipalFromExpiredToken(tokensDto.AuthToken!);
+                }
+                catch (Exception ex)
+                {
+                    return ResultDto<TokensDto>.Failure("Invalid auth token", HttpStatusCode.Unauthorized);
+                }
+
                 var userId = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
                 if (!Guid.TryParse(userId, out var userGuid))
                     return ResultDto<TokensDto>.Failure("Invalid user ID in token", HttpStatusCode.BadRequest);
 
-                var user = await _dbContext.Users
-                    .FirstOrDefaultAsync(u => u.Id == userGuid);
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
 
                 if (user == null || user.RefreshToken != tokensDto.RefreshToken || user.RefreshTokenExpiry < DateTime.UtcNow)
                     return ResultDto<TokensDto>.Failure("Invalid refresh token", HttpStatusCode.Unauthorized);
@@ -127,7 +137,7 @@ namespace TaskTracker.Infrastructure.Services
                 Audience = jwtSettings["Audience"],
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha512Signature)
+                    SecurityAlgorithms.HmacSha512)
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -142,62 +152,31 @@ namespace TaskTracker.Infrastructure.Services
             return new TokensDto { AuthToken = authToken, RefreshToken = refreshToken };
         }
 
-        public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
+        public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
-            var key = Encoding.ASCII.GetBytes(jwtSettings["RefreshTokenSecret"]!);
+            var key = Encoding.ASCII.GetBytes(jwtSettings["AuthKey"]!);
 
             var tokenValidationParameters = new TokenValidationParameters
             {
-                ValidateAudience = false,
-                ValidateIssuer = false,
+                ValidateIssuer = true,
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidateAudience = true,
+                ValidAudience = jwtSettings["Audience"],
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateLifetime = false
+                ValidateLifetime = false,
+                ClockSkew = TimeSpan.Zero
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
 
             if (securityToken is not JwtSecurityToken jwtSecurityToken ||
-                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512Signature, StringComparison.InvariantCultureIgnoreCase))
-            {
-                throw new SecurityTokenException("Invalid token");
-            }
+                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512, StringComparison.InvariantCultureIgnoreCase))
+                throw new Exception();
 
             return principal;
-        }
-
-        // Argon2id For Password Hashing
-        private static string HashPassword(string password)
-        {
-            var salt = RandomNumberGenerator.GetBytes(16);
-            var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
-            {
-                Salt = salt,
-                DegreeOfParallelism = 8,
-                MemorySize = 64 * 1024,
-                Iterations = 4
-            };
-            var hash = argon2.GetBytes(32);
-            return $"{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
-        }
-
-        private static bool VerifyPassword(string password, string storedHash)
-        {
-            var parts = storedHash.Split('.', 2);
-            if (parts.Length != 2) return false;
-            var salt = Convert.FromBase64String(parts[0]);
-            var expected = parts[1];
-            var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
-            {
-                Salt = salt,
-                DegreeOfParallelism = 8,
-                MemorySize = 64 * 1024,
-                Iterations = 4
-            };
-            var computed = argon2.GetBytes(32);
-            return Convert.ToBase64String(computed) == expected;
         }
     }
 }

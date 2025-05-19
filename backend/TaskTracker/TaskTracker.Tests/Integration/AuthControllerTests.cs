@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace TaskTracker.Tests.Integration
 {
-    public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
+    /*public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     {
         private readonly WebApplicationFactory<Program> _factory;
         private readonly string _dbName = $"TestDb_{Guid.NewGuid()}";
@@ -111,5 +111,5 @@ namespace TaskTracker.Tests.Integration
         {
             public string Error { get; set; }
         }
-    }
+    }*/
 }

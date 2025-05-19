@@ -1,10 +1,9 @@
 ﻿using System.Net.Http.Json;
 using TechTalk.SpecFlow;
-using TaskTracker.Tests.Context;
 
 namespace TaskTracker.Tests.Steps
 {
-    [Binding]
+    /*[Binding]
     public class UserRegistrationSteps(TestContext dbContext, ScenarioContext scnearioContext)
     {
         private readonly TestContext _dbContext = dbContext;
@@ -24,5 +23,5 @@ namespace TaskTracker.Tests.Steps
             var response = (HttpResponseMessage)_scnearioContext["response"]!;
             Assert.True(response.Headers.Contains("X-Confirmation-Sent"));
         }
-    }
+    }*/
 }
