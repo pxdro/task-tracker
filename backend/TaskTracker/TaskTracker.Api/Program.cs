@@ -8,9 +8,10 @@ using TaskTracker.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add context to the container
-builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+// Add context to the container only if not Testing Env
+if (!builder.Environment.IsEnvironment("Testing"))
+    builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add JWT Auth settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

@@ -1,12 +1,7 @@
-﻿using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 using Moq;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Security.Claims;
-using System.Text;
 using TaskTracker.Domain.DTOs;
 using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Interfaces;
@@ -24,10 +19,10 @@ namespace TaskTracker.Tests.Domain
 
         public AuthServiceTests()
         {
+            // Db context
             var options = new DbContextOptionsBuilder<TaskTrackerDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseInMemoryDatabase(databaseName: "TestDb" + Guid.NewGuid().ToString())
                 .Options;
-
             _dbContext = new TaskTrackerDbContext(options);
 
             // Configs for JWT
@@ -53,6 +48,7 @@ namespace TaskTracker.Tests.Domain
                 return sectionMock.Object;
             });
 
+            // Service
             _authService = new AuthService(_hasherMock.Object, _dbContext, _configMock.Object);
         }
 
@@ -78,7 +74,7 @@ namespace TaskTracker.Tests.Domain
         }
 
         [Fact]
-        public async Task RegisterAsync_EmailExists_ReturnsForbidden()
+        public async Task RegisterAsync_EmailAlreadyExists_ReturnsForbidden()
         {
             // Arrange
             await _dbContext.Users.AddAsync(new User { Email = "exists@test.com" });
@@ -127,7 +123,7 @@ namespace TaskTracker.Tests.Domain
         }
 
         [Fact]
-        public async Task LoginAsync_UserNotFound_ReturnsNotFound()
+        public async Task LoginAsync_EmailUnregistered_ReturnsNotFound()
         {
             // Act
             var result = await _authService.LoginAsync(new UserRequestDto
@@ -143,7 +139,7 @@ namespace TaskTracker.Tests.Domain
         }
 
         [Fact]
-        public async Task LoginAsync_InvalidPassword_ReturnsUnauthorized()
+        public async Task LoginAsync_InvalidCredentials_ReturnsUnauthorized()
         {
             // Arrange
             await _dbContext.Users.AddAsync(new User
@@ -169,7 +165,7 @@ namespace TaskTracker.Tests.Domain
         }
 
         [Fact]
-        public async Task RefreshTokenAsync_ValidAuthAndRefreshToken_ReturnsNewTokens()
+        public async Task RefreshTokenAsync_ValidTokens_ReturnsNewTokens()
         {
             // Arrange
             var user = new User
@@ -201,7 +197,7 @@ namespace TaskTracker.Tests.Domain
             Assert.NotNull(result.Data?.AuthToken);
             Assert.NotNull(result.Data.RefreshToken);
         }
-
+       
         [Fact]
         public async Task RefreshTokenAsync_ValidAuthButInvalidRefreshToken_ReturnsUnauthorized()
         {

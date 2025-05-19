@@ -1,5 +1,4 @@
-﻿using Konscious.Security.Cryptography;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -83,21 +82,17 @@ namespace TaskTracker.Infrastructure.Services
             try
             {
                 var principal = new ClaimsPrincipal();
+                var userId = Guid.Empty;
                 try
                 {
-                    principal = GetPrincipalFromExpiredToken(tokensDto.AuthToken!);
+                    (principal, userId) = GetPrincipalFromExpiredToken(tokensDto.AuthToken!);
                 }
-                catch (Exception ex)
+                catch
                 {
                     return ResultDto<TokensDto>.Failure("Invalid auth token", HttpStatusCode.Unauthorized);
                 }
 
-                var userId = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (!Guid.TryParse(userId, out var userGuid))
-                    return ResultDto<TokensDto>.Failure("Invalid user ID in token", HttpStatusCode.BadRequest);
-
-                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
 
                 if (user == null || user.RefreshToken != tokensDto.RefreshToken || user.RefreshTokenExpiry < DateTime.UtcNow)
                     return ResultDto<TokensDto>.Failure("Invalid refresh token", HttpStatusCode.Unauthorized);
@@ -152,7 +147,7 @@ namespace TaskTracker.Infrastructure.Services
             return new TokensDto { AuthToken = authToken, RefreshToken = refreshToken };
         }
 
-        public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
+        public (ClaimsPrincipal principal, Guid userId) GetPrincipalFromExpiredToken(string token)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var key = Encoding.ASCII.GetBytes(jwtSettings["AuthKey"]!);
@@ -171,12 +166,16 @@ namespace TaskTracker.Infrastructure.Services
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
+            var userId = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+            // If not same security method OR not same algorithm OR not valid guid OR principal or userId is null -> Invalid auth token
             if (securityToken is not JwtSecurityToken jwtSecurityToken ||
-                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512, StringComparison.InvariantCultureIgnoreCase))
+                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512, StringComparison.InvariantCultureIgnoreCase) ||
+                !Guid.TryParse(userId, out var userGuid) ||
+                principal == null || userId == null)
                 throw new Exception();
-
-            return principal;
+            
+            return (principal, userGuid);
         }
     }
 }
