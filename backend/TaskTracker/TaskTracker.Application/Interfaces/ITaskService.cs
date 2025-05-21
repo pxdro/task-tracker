@@ -1,8 +1,7 @@
-﻿using TaskTracker.Domain.DTOs;
-using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Enums;
+﻿using TaskTracker.Application.DTOs;
+using TaskTracker.Application.Enums;
 
-namespace TaskTracker.Domain.Interfaces
+namespace TaskTracker.Application.Interfaces
 {
     public interface ITaskService
     {

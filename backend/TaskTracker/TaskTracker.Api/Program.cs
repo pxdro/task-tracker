@@ -2,59 +2,51 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using TaskTracker.Domain.Interfaces;
+using TaskTracker.Application.Interfaces;
+using TaskTracker.Application.Profiles;
 using TaskTracker.Infrastructure.Context;
 using TaskTracker.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add context to the container only if not Testing Env
-if (!builder.Environment.IsEnvironment("Testing"))
-    builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Load environment variables
+builder.Configuration
+    .AddJsonFile("appsettings.json")
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables();
 
+// Add context to the container only if not Testing Env
+builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
+{
+    if (builder.Environment.IsEnvironment("Testing"))
+        options.UseInMemoryDatabase("TestDb");
+    else
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+        
 // Add JWT Auth settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var key = Encoding.UTF8.GetBytes(jwtSettings["AuthKey"]!);
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.FromMinutes(double.Parse(jwtSettings["ClockSkew"]!))
-    };
-
-    options.Events = new JwtBearerEvents
-    {
-        OnAuthenticationFailed = context =>
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            if (context.Exception is SecurityTokenExpiredException)
-            {
-                context.Response.Headers.Append("Token-Expired", "true");
-            }
-            return Task.CompletedTask;
-        }
-    };
-});
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ClockSkew = TimeSpan.Zero,
+        };
+    });
 
 // Add services to the container.
-builder.Services.AddAuthorization();                // Auth
-builder.Services.AddControllers();                  // Controllers
-builder.Services.AddEndpointsApiExplorer();         // Swagger
-builder.Services.AddSwaggerGen();                   // Swagger
-builder.Services.AddAutoMapper(typeof(Program));    // AutoMapper
+builder.Services.AddAuthorization();                    // Auth
+builder.Services.AddControllers();                      // Controllers
+builder.Services.AddEndpointsApiExplorer();             // Swagger
+builder.Services.AddSwaggerGen();                       // Swagger
+builder.Services.AddAutoMapper(typeof(MapperProfile));  // AutoMapper
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddSingleton<IPasswordHasherService, PasswordHasherService>();

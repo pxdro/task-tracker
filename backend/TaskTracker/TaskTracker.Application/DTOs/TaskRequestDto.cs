@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using TaskTracker.Domain.Enums;
+using TaskTracker.Application.Enums;
 
-namespace TaskTracker.Domain.DTOs
+namespace TaskTracker.Application.DTOs
 {
     public class TaskRequestDto
     {

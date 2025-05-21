@@ -1,10 +1,10 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
-using TaskTracker.Domain.DTOs;
-using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Enums;
-using TaskTracker.Domain.Interfaces;
+using TaskTracker.Application.DTOs;
+using TaskTracker.Application.Entities;
+using TaskTracker.Application.Enums;
+using TaskTracker.Application.Interfaces;
 using TaskTracker.Infrastructure.Context;
 
 namespace TaskTracker.Infrastructure.Services

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TaskTracker.Domain.DTOs;
-using TaskTracker.Domain.Interfaces;
+using TaskTracker.Application.DTOs;
+using TaskTracker.Application.Interfaces;
 
 namespace TaskTracker.Api.Controllers
 {

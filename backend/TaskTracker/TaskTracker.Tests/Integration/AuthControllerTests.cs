@@ -1,64 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using System.Net.Http.Json;
 using System.Net;
-using TaskTracker.Domain.DTOs;
-using TaskTracker.Infrastructure.Context;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
+using TaskTracker.Application.DTOs;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
-using TechTalk.SpecFlow.CommonModels;
 
 namespace TaskTracker.Tests.Integration
 {
-    public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
+    public class AuthControllerTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
     {
-        private readonly HttpClient _client;
-
-        public AuthControllerTests(WebApplicationFactory<Program> factory)
-        {
-            _client = factory
-                .WithWebHostBuilder(builder =>
-                {
-                    // 1) Ensure Testing Env -> Don't create Context
-                    builder.UseEnvironment("Testing");
-
-                    // 2) Config JWT Settings
-                    builder.ConfigureAppConfiguration((context, config) =>
-                    {
-                        var dict = new Dictionary<string, string>
-                        {
-                            ["JwtSettings:AuthKey"] = "fake_auth_key_with_at_least_512_bits_1234567890_1234567890_1234567890",
-                            ["JwtSettings:Issuer"] = "TestIssuer",
-                            ["JwtSettings:Audience"] = "TestAudience",
-                            ["JwtSettings:AuthTokenExpirationMinutes"] = "60",
-                            ["JwtSettings:RefreshTokenExpirationDays"] = "1"
-                        };
-                        config.AddInMemoryCollection(dict!);
-                    });
-
-                    // 3) Register DB InMemory
-                    builder.ConfigureTestServices(services =>
-                    {
-                        // Remove previous DbContext
-                        var descriptors = services
-                            .Where(d =>
-                                d.ServiceType == typeof(TaskTrackerDbContext) ||
-                                (d.ServiceType.IsGenericType
-                                 && d.ServiceType.GetGenericTypeDefinition() == typeof(DbContextOptions<>)
-                                 && d.ServiceType.GenericTypeArguments[0] == typeof(TaskTrackerDbContext))
-                            )
-                            .ToList();
-                        foreach (var d in descriptors) services.Remove(d);
-
-                        // Fixed DB InMemory to ensure data permanency
-                        services.AddDbContext<TaskTrackerDbContext>(opts =>
-                            opts.UseInMemoryDatabase("TestDb_Shared"));
-                    });
-                })
-                .CreateClient();
-        }
+        private readonly HttpClient _client = factory
+            .WithWebHostBuilder(builder => builder.UseEnvironment("Testing")).CreateClient();
 
         [Fact]
         public async Task Register_NewUser_ReturnsCreatedAndHeaderAndData()

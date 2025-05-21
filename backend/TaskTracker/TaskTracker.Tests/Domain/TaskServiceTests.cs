@@ -1,135 +1,267 @@
-﻿using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Enums;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using Moq;
+using System.Net;
+using TaskTracker.Application.DTOs;
+using TaskTracker.Application.Entities;
+using TaskTracker.Application.Enums;
+using TaskTracker.Infrastructure.Context;
 using TaskTracker.Infrastructure.Services;
 
 namespace TaskTracker.Tests.Domain
 {
-    /*public class TaskServiceTests
+    public class TaskServiceTests : IDisposable
     {
-        private readonly TaskService _service = new();
-        private const string User = "user@example.com";
+        private readonly TaskTrackerDbContext _dbContext;
+        private readonly Mock<IMapper> _mapperMock = new();
+        private readonly TaskService _taskService;
 
-        private static TaskItem CreateTask(string title, string description, EnumTaskStatus status) =>
-            new() { Title = title, Description = description, Status = status };
-
-        [Fact]
-        public async Task Add_Should_Add_Task()
+        public TaskServiceTests()
         {
-            // Arrange
-            var task = CreateTask("Test", "Desc", EnumTaskStatus.Active);
+            // InMemory Db context
+            var options = new DbContextOptionsBuilder<TaskTrackerDbContext>()
+                .UseInMemoryDatabase(databaseName: "TestDb_Shared")
+                .Options;
+            _dbContext = new TaskTrackerDbContext(options);
 
-            // Act
-            var result = await _service.Add(User, task);
-            var all = await _service.GetAll(User);
+            // Configs for AutoMapper
+            _mapperMock.Setup(x => x.Map<TaskReturnDto>(It.IsAny<TaskItem>()))
+                .Returns((TaskItem source) => new TaskReturnDto
+                {
+                    Id = source.Id,
+                    Title = source.Title,
+                    Description = source.Description,
+                    Status = source.Status,
+                    CreatedAt = source.CreatedAt,
+                    UpdatedAt = source.UpdatedAt,
+                });
+            _mapperMock.Setup(x => x.Map<IEnumerable<TaskReturnDto>>(It.IsAny<IEnumerable<TaskItem>>()))
+                .Returns((IEnumerable<TaskItem> source) =>
+                    source.Select(t => new TaskReturnDto
+                    {
+                        Id = t.Id,
+                        Title = t.Title,
+                        Description = t.Description,
+                        Status = t.Status,
+                        CreatedAt = t.CreatedAt,
+                        UpdatedAt = t.UpdatedAt
+                    }));
+            _mapperMock.Setup(x => x.Map<TaskItem>(It.IsAny<TaskRequestDto>()))
+                .Returns((TaskRequestDto source) => new TaskItem
+                {
+                    Title = source.Title,
+                    Description = source.Description,
+                });
 
-            // Assert
-            Assert.Single(all);
-            Assert.Equal(task.Title, result.Title);
+            _taskService = new TaskService(_dbContext, _mapperMock.Object);
         }
 
         [Fact]
-        public async Task GetAll_Should_Return_All_User_Tasks()
+        public async Task GetAllTasksAsync_NoTasks_ReturnsEmptyList()
         {
             // Arrange
-            await _service.Add(User, CreateTask("One", "A", EnumTaskStatus.Active));
-            await _service.Add(User, CreateTask("Two", "B", EnumTaskStatus.Completed));
+            var userId = Guid.NewGuid();
 
             // Act
-            var tasks = await _service.GetAll(User);
+            var result = await _taskService.GetAllTasksAsync(userId);
 
             // Assert
-            Assert.Equal(2, tasks.Count);
-        }
-
-        [Theory]
-        [InlineData("title", "write", 1)]
-        [InlineData("description", "home", 2)]
-        [InlineData("status", "Completed", 2)]
-        public async Task GetAll_Should_Filter_Tasks(string field, string value, int expected)
-        {
-            // Arrange
-            await _service.Add(User, CreateTask("Write report", "Work", EnumTaskStatus.Active));
-            await _service.Add(User, CreateTask("Buy groceries", "For home", EnumTaskStatus.Completed));
-            await _service.Add(User, CreateTask("Dump the thrash", "For home", EnumTaskStatus.Completed));
-
-            // Act
-            var filtered = await _service.GetAll(User, field, value);
-
-            // Assert
-            Assert.Equal(expected, filtered.Count);
+            Assert.True(result.IsSuccess);
+            Assert.Empty(result.Data);
         }
 
         [Fact]
-        public async Task FirstOrDefault_Should_Return_Task()
+        public async Task GetAllTasksAsync_WithTasks_ReturnsMappedTasks()
         {
             // Arrange
-            var task = CreateTask("Read book", "Study", EnumTaskStatus.Active);
-            await _service.Add(User, task);
+            var userId = Guid.NewGuid();
+            var tasks = new List<TaskItem>
+            {
+                new() { UserId = userId, Title = "Task 1" },
+                new() { UserId = userId, Title = "Task 2" }
+            };
+            await _dbContext.Tasks.AddRangeAsync(tasks);
+            await _dbContext.SaveChangesAsync();
 
             // Act
-            var result = await _service.FirstOrDefault(User, "title", "read book");
+            var result = await _taskService.GetAllTasksAsync(userId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(task.Title, result?.Title);
+            Assert.True(result.IsSuccess);
+            Assert.Equal(2, result.Data?.Count());
         }
 
         [Fact]
-        public async Task Update_Should_Modify_Existing_Task()
+        public async Task GetTaskByIdAsync_TaskExistsAndUserOwner_ReturnsTask()
         {
             // Arrange
-            await _service.Add(User, CreateTask("Initial", "Old", EnumTaskStatus.Active));
-            var updated = CreateTask("Updated", "New", EnumTaskStatus.Completed);
+            var userId = Guid.NewGuid();
+            var task = new TaskItem { UserId = userId };
+            await _dbContext.Tasks.AddAsync(task);
+            await _dbContext.SaveChangesAsync();
 
             // Act
-            var result = await _service.Update(User, "initial", updated);
+            var result = await _taskService.GetTaskByIdAsync(task.Id, userId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal("Updated", result?.Title);
-            Assert.Equal("New", result?.Description);
-            Assert.Equal(EnumTaskStatus.Completed, result?.Status);
+            Assert.True(result.IsSuccess);
+            Assert.Equal(task.Id, result.Data?.Id);
         }
 
         [Fact]
-        public async Task ChangeStatus_Should_Update_Task_Status()
+        public async Task GetTaskByIdAsync_TaskExistsButNotOwner_ReturnsUnauthorized()
         {
             // Arrange
-            await _service.Add(User, CreateTask("Initial", "Old", EnumTaskStatus.Active));
+            var task = new TaskItem { UserId = Guid.NewGuid() };
+            await _dbContext.Tasks.AddAsync(task);
+            await _dbContext.SaveChangesAsync();
 
             // Act
-            var result = await _service.ChangeStatus(User, "initial", EnumTaskStatus.Completed);
+            var result = await _taskService.GetTaskByIdAsync(task.Id, Guid.NewGuid()); // Different user
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal("Initial", result?.Title);
-            Assert.Equal("Old", result?.Description);
-            Assert.Equal(EnumTaskStatus.Completed, result?.Status);
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Access denied", result.ErrorMessage);
+            Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
         }
 
         [Fact]
-        public async Task Delete_Should_Remove_Task()
+        public async Task GetTaskByIdAsync_TaskNotFound_ReturnsNotFound()
         {
-            // Arrange
-            await _service.Add(User, CreateTask("Delete me", "Trash", EnumTaskStatus.Active));
-
             // Act
-            var deleted = await _service.Delete(User, "delete me");
-            var all = await _service.GetAll(User);
+            var result = await _taskService.GetTaskByIdAsync(Guid.NewGuid(), Guid.NewGuid());
 
             // Assert
-            Assert.True(deleted);
-            Assert.Empty(all);
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Tasks not found", result.ErrorMessage);
+            Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
         }
 
         [Fact]
-        public async Task Delete_Nonexistent_Task_Should_Return_False()
+        public async Task CreateTaskAsync_ValidData_ReturnsCreatedTask()
         {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var requestDto = new TaskRequestDto { Title = "New Task", Description = "Desc" };
+
             // Act
-            var result = await _service.Delete(User, "nonexistent");
+            var result = await _taskService.CreateTaskAsync(requestDto, userId);
 
             // Assert
-            Assert.False(result);
+            Assert.True(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.Created, result.StatusCode);
+            Assert.Equal(requestDto.Title, result.Data?.Title);
+            Assert.Equal(EnumTaskStatus.Active, result.Data?.Status);
+            Assert.NotNull(result.Data?.CreatedAt);
         }
-    }*/
+
+        [Fact]
+        public async Task UpdateTaskAsync_ValidUpdate_UpdatesTask()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var task = new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Title = "Old Title",
+                CreatedAt = DateTime.UtcNow.AddHours(-1),
+                UpdatedAt = DateTime.UtcNow.AddHours(-1)
+            };
+            await _dbContext.Tasks.AddAsync(task);
+            await _dbContext.SaveChangesAsync();
+            _dbContext.Entry(task).State = EntityState.Detached;
+
+            var updateDto = new TaskRequestDto { Title = "New Title", Description = "New Desc" };
+
+            // Act
+            var result = await _taskService.UpdateTaskAsync(task.Id, updateDto, userId);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal("New Title", result.Data?.Title);
+            Assert.Equal("New Desc", result.Data?.Description);
+            Assert.Equal(EnumTaskStatus.Active, result.Data?.Status);
+            Assert.Equal(task.CreatedAt, result.Data?.CreatedAt);
+            Assert.True(result.Data?.UpdatedAt > task.UpdatedAt);
+        }
+
+        [Fact]
+        public async Task ChangeTaskStatusAsync_ValidStatus_UpdatesStatus()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var task = new TaskItem
+            {
+                UserId = userId,
+                UpdatedAt = DateTime.UtcNow.AddHours(-1)
+            };
+            await _dbContext.Tasks.AddAsync(task);
+            await _dbContext.SaveChangesAsync();
+            _dbContext.Entry(task).State = EntityState.Detached;
+
+            // Act
+            var result = await _taskService.ChangeTaskStatusAsync(task.Id, userId, EnumTaskStatus.Completed);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(EnumTaskStatus.Completed, result.Data?.Status);
+            Assert.True(result.Data?.UpdatedAt > task.UpdatedAt);
+        }
+
+        [Fact]
+        public async Task DeleteTaskAsync_ValidTask_DeletesTask()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var task = new TaskItem { UserId = userId };
+            await _dbContext.Tasks.AddAsync(task);
+            await _dbContext.SaveChangesAsync();
+
+            // Act
+            var result = await _taskService.DeleteTaskAsync(task.Id, userId);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Null(await _dbContext.Tasks.FindAsync(task.Id));
+        }
+
+        [Fact]
+        public async Task DeleteTaskAsync_TaskNotFound_ReturnsNotFound()
+        {
+            // Act
+            var result = await _taskService.DeleteTaskAsync(Guid.NewGuid(), Guid.NewGuid());
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Tasks not found", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task AnyMethod_DatabaseError_ReturnsInternalServerError()
+        {
+            // Arrange
+            var invalidDbContext = new TaskTrackerDbContext(
+                new DbContextOptionsBuilder<TaskTrackerDbContext>()
+                    .UseInMemoryDatabase("InvalidDb")
+                    .Options);
+            invalidDbContext.Dispose(); // Force database error
+
+            var service = new TaskService(invalidDbContext, _mapperMock.Object);
+
+            // Act
+            var result = await service.GetAllTasksAsync(Guid.NewGuid());
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Server error", result.ErrorMessage);
+            Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+        }
+
+        public void Dispose()
+        {
+            _dbContext.Database.EnsureDeleted();
+            _dbContext.Dispose();
+        }
+    }
 }

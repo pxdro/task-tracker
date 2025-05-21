@@ -1,4 +1,4 @@
-﻿namespace TaskTracker.Domain.DTOs
+﻿namespace TaskTracker.Application.DTOs
 {
     public class UserReturnDto
     {

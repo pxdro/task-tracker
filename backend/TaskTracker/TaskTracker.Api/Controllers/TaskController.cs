@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using TaskTracker.Domain.DTOs;
-using TaskTracker.Domain.Enums;
-using TaskTracker.Domain.Interfaces;
+using TaskTracker.Application.DTOs;
+using TaskTracker.Application.Enums;
+using TaskTracker.Application.Interfaces;
 
 namespace TaskTracker.Api.Controllers
 {

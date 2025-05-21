@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TaskTracker.Domain.DTOs
+namespace TaskTracker.Application.DTOs
 {
     public class UserRequestDto
     {

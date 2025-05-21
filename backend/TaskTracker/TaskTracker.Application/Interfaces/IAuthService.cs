@@ -1,6 +1,6 @@
-﻿using TaskTracker.Domain.DTOs;
+﻿using TaskTracker.Application.DTOs;
 
-namespace TaskTracker.Domain.Interfaces
+namespace TaskTracker.Application.Interfaces
 {
     public interface IAuthService
     {

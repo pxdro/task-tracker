@@ -1,7 +1,7 @@
 ﻿using Konscious.Security.Cryptography;
 using System.Security.Cryptography;
 using System.Text;
-using TaskTracker.Domain.Interfaces;
+using TaskTracker.Application.Interfaces;
 
 namespace TaskTracker.Infrastructure.Services
 {

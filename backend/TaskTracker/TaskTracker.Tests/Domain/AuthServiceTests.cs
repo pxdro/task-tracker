@@ -2,9 +2,9 @@
 using Microsoft.Extensions.Configuration;
 using Moq;
 using System.Net;
-using TaskTracker.Domain.DTOs;
-using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Interfaces;
+using TaskTracker.Application.DTOs;
+using TaskTracker.Application.Entities;
+using TaskTracker.Application.Interfaces;
 using TaskTracker.Infrastructure.Context;
 using TaskTracker.Infrastructure.Services;
 
@@ -19,9 +19,9 @@ namespace TaskTracker.Tests.Domain
 
         public AuthServiceTests()
         {
-            // Db context
+            // InMemory Db context
             var options = new DbContextOptionsBuilder<TaskTrackerDbContext>()
-                .UseInMemoryDatabase(databaseName: "TestDb" + Guid.NewGuid().ToString())
+                .UseInMemoryDatabase(databaseName: "TestDb_Shared")
                 .Options;
             _dbContext = new TaskTrackerDbContext(options);
 
@@ -247,6 +247,30 @@ namespace TaskTracker.Tests.Domain
             Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
         }
 
-        public void Dispose() => _dbContext.Dispose();
+        [Fact]
+        public async Task AnyMethod_DatabaseError_ReturnsInternalServerError()
+        {
+            // Arrange
+            var invalidDbContext = new TaskTrackerDbContext(
+                new DbContextOptionsBuilder<TaskTrackerDbContext>()
+                    .UseInMemoryDatabase("InvalidDb")
+                    .Options);
+            invalidDbContext.Dispose(); // Force database error
+            var service = new AuthService(_hasherMock.Object, invalidDbContext, _configMock.Object);
+
+            // Act
+            var result = await service.RegisterAsync(new UserRequestDto { });
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Server error", result.ErrorMessage);
+            Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+        }
+
+        public void Dispose()
+        {
+            _dbContext.Database.EnsureDeleted();
+            _dbContext.Dispose();
+        }
     }
 }
