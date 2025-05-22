@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using System.Net;
+using System.Threading.Tasks;
 using TaskTracker.Application.DTOs;
 using TaskTracker.Application.Entities;
 using TaskTracker.Application.Enums;
@@ -20,7 +21,7 @@ namespace TaskTracker.Tests.Domain
         {
             // InMemory Db context
             var options = new DbContextOptionsBuilder<TaskTrackerDbContext>()
-                .UseInMemoryDatabase(databaseName: "TestDb_Shared")
+                .UseInMemoryDatabase(databaseName: "TestDb_" + Guid.NewGuid().ToString())
                 .Options;
             _dbContext = new TaskTrackerDbContext(options);
 
@@ -109,6 +110,18 @@ namespace TaskTracker.Tests.Domain
         }
 
         [Fact]
+        public async Task GetTaskByIdAsync_TaskNotFound_ReturnsNotFound()
+        {
+            // Act
+            var result = await _taskService.GetTaskByIdAsync(Guid.NewGuid(), Guid.NewGuid());
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Task not found", result.ErrorMessage);
+            Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+        }
+
+        [Fact]
         public async Task GetTaskByIdAsync_TaskExistsButNotOwner_ReturnsUnauthorized()
         {
             // Arrange
@@ -123,18 +136,6 @@ namespace TaskTracker.Tests.Domain
             Assert.False(result.IsSuccess);
             Assert.Equal("Access denied", result.ErrorMessage);
             Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
-        }
-
-        [Fact]
-        public async Task GetTaskByIdAsync_TaskNotFound_ReturnsNotFound()
-        {
-            // Act
-            var result = await _taskService.GetTaskByIdAsync(Guid.NewGuid(), Guid.NewGuid());
-
-            // Assert
-            Assert.False(result.IsSuccess);
-            Assert.Equal("Tasks not found", result.ErrorMessage);
-            Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
         }
 
         [Fact]
@@ -187,6 +188,40 @@ namespace TaskTracker.Tests.Domain
         }
 
         [Fact]
+        public async Task UpdateTaskAsync_TaskNotFound_ReturnsNotFound()
+        {
+            // Arrange
+            var updateDto = new TaskRequestDto { Title = "New Title", Description = "New Desc" };
+
+            // Act
+            var result = await _taskService.UpdateTaskAsync(Guid.NewGuid(), updateDto, Guid.NewGuid());
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Null(result.Data);
+            Assert.Equal("Task not found", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task UpdateTaskAsync_TaskExistButNotOwner_ReturnsUnauthorized()
+        {
+            // Arrange
+            var task = new TaskItem { UserId = Guid.NewGuid() };
+            await _dbContext.Tasks.AddAsync(task);
+            await _dbContext.SaveChangesAsync();
+            _dbContext.Entry(task).State = EntityState.Detached;
+            var updateDto = new TaskRequestDto { Title = "New Title", Description = "New Desc" };
+
+            // Act
+            var result = await _taskService.UpdateTaskAsync(task.Id, updateDto, Guid.NewGuid());
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Null(result.Data);
+            Assert.Equal("Access denied", result.ErrorMessage);
+        }
+
+        [Fact]
         public async Task ChangeTaskStatusAsync_ValidStatus_UpdatesStatus()
         {
             // Arrange
@@ -207,6 +242,36 @@ namespace TaskTracker.Tests.Domain
             Assert.True(result.IsSuccess);
             Assert.Equal(EnumTaskStatus.Completed, result.Data?.Status);
             Assert.True(result.Data?.UpdatedAt > task.UpdatedAt);
+        }
+
+        [Fact]
+        public async Task ChangeTaskStatusAsync_TaskNotFound_ReturnsNotFound()
+        {
+            // Act
+            var result = await _taskService.ChangeTaskStatusAsync(Guid.NewGuid(), Guid.NewGuid(), EnumTaskStatus.Completed);
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Null(result.Data);
+            Assert.Equal("Task not found", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task ChangeTaskStatusAsync_TaskExistButNotOwner_ReturnsUnauthorized()
+        {
+            // Arrange
+            var task = new TaskItem { UserId = Guid.NewGuid() };
+            await _dbContext.Tasks.AddAsync(task);
+            await _dbContext.SaveChangesAsync();
+            _dbContext.Entry(task).State = EntityState.Detached;
+
+            // Act
+            var result = await _taskService.ChangeTaskStatusAsync(task.Id, Guid.NewGuid(), EnumTaskStatus.Completed);
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Null(result.Data);
+            Assert.Equal("Access denied", result.ErrorMessage);
         }
 
         [Fact]
@@ -234,7 +299,25 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal("Tasks not found", result.ErrorMessage);
+            Assert.Equal("Task not found", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task DeleteTaskAsync_TaskExistButNotOwner_ReturnsUnauthorized()
+        {
+            // Arrange
+            var task = new TaskItem { UserId = Guid.NewGuid() };
+            await _dbContext.Tasks.AddAsync(task);
+            await _dbContext.SaveChangesAsync();
+            _dbContext.Entry(task).State = EntityState.Detached;
+
+            // Act
+            var result = await _taskService.DeleteTaskAsync(task.Id, Guid.NewGuid());
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.False(result?.Data);
+            Assert.Equal("Access denied", result?.ErrorMessage);
         }
 
         [Fact]

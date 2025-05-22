@@ -42,7 +42,7 @@ namespace TaskTracker.Infrastructure.Services
                 var userOk = task?.UserId == userId;
 
                 if (task == null)
-                    return ResultDto<TaskReturnDto>.Failure("Tasks not found", HttpStatusCode.NotFound);
+                    return ResultDto<TaskReturnDto>.Failure("Task not found", HttpStatusCode.NotFound);
                 else if (!userOk)
                     return ResultDto<TaskReturnDto>.Failure("Access denied", HttpStatusCode.Unauthorized);
                 else
@@ -90,7 +90,7 @@ namespace TaskTracker.Infrastructure.Services
                 bool userOk = task?.UserId == userId;
 
                 if (task == null)
-                    return ResultDto<TaskReturnDto>.Failure("Tasks not found", HttpStatusCode.NotFound);
+                    return ResultDto<TaskReturnDto>.Failure("Task not found", HttpStatusCode.NotFound);
                 else if (!userOk)
                     return ResultDto<TaskReturnDto>.Failure("Access denied", HttpStatusCode.Unauthorized);
 
@@ -120,7 +120,7 @@ namespace TaskTracker.Infrastructure.Services
                 bool userOk = task?.UserId == userId;
 
                 if (task == null)
-                    return ResultDto<TaskReturnDto>.Failure("Tasks not found", HttpStatusCode.NotFound);
+                    return ResultDto<TaskReturnDto>.Failure("Task not found", HttpStatusCode.NotFound);
                 else if (!userOk)
                     return ResultDto<TaskReturnDto>.Failure("Access denied", HttpStatusCode.Unauthorized);
 
@@ -149,7 +149,7 @@ namespace TaskTracker.Infrastructure.Services
                 bool userOk = task?.UserId == userId;
 
                 if (task == null)
-                    return ResultDto<bool>.Failure("Tasks not found", HttpStatusCode.NotFound);
+                    return ResultDto<bool>.Failure("Task not found", HttpStatusCode.NotFound);
                 else if (!userOk)
                     return ResultDto<bool>.Failure("Access denied", HttpStatusCode.Unauthorized);
 

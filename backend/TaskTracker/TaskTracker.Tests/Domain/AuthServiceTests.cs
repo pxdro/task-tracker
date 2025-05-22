@@ -21,7 +21,7 @@ namespace TaskTracker.Tests.Domain
         {
             // InMemory Db context
             var options = new DbContextOptionsBuilder<TaskTrackerDbContext>()
-                .UseInMemoryDatabase(databaseName: "TestDb_Shared")
+                .UseInMemoryDatabase(databaseName: "TestDb_" + Guid.NewGuid().ToString())
                 .Options;
             _dbContext = new TaskTrackerDbContext(options);
 

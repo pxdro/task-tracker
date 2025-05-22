@@ -5,14 +5,16 @@ namespace TaskTracker.Application.DTOs
 {
     public class ResultDto<T>
     {
+        [JsonIgnore] // Do not return in API Response
         public bool IsSuccess { get; private set; }
 
+        [JsonIgnore] // Do not return in API Response
         public HttpStatusCode StatusCode { get; private set; }
 
-        [JsonInclude][JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] // Ensure returns in API response, but only if not null
+        [JsonInclude] // Ensure correct return in API Response because of private set
         public string? ErrorMessage { get; private set; }
 
-        [JsonInclude][JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] // Ensure returns in API response, but only if not null
+        [JsonInclude] // Ensure correct return in API Response because of private set
         public T? Data { get; private set; }
 
         public static ResultDto<T> Success(T data, HttpStatusCode statusCode) => new() { IsSuccess = true, StatusCode = statusCode, Data = data };
