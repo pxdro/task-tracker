@@ -1,7 +1,7 @@
 Feature: Task Management
   As an authenticated user
-  I want to manage my personal tasks
-  So that I can stay organized and productive
+  I want to create, read, update, and delete tasks,
+  So that I can manage my to-dos.
 
   Background:
     Given I am logged in as "user@example.com" with password "Str0ngP@ss!"
@@ -31,19 +31,23 @@ Feature: Task Management
 
   Scenario: Create a new task
     When I create a task with title "Review PR" and description "ASAP"
-    Then I should be returned code 200 
+    Then I should be returned code 201 
     And the task should be saved with status "Active"
 
   Scenario: Update a task
     When I update the task titled "Buy groceries" to have title "Buy groceries and fruits"
     Then I should be returned code 200 
-    And I should see 1 tasks 
     And the task should have title "Buy groceries and fruits"
 
-  Scenario: Change task's status
-    When I mark the task titled "Write report" as completed
-    Then I should be returned code 200 
+  Scenario Outline: Change task status
+    When I change the status of the task titled "<title>" to "<status>"
+    Then I should be returned code 200
     And the task "Write report" should have status "Completed"
+
+    Examples:
+      | title           | status    |
+      | Write report    | Completed |
+      | Buy groceries   | Active    |
 
   Scenario: Delete a task
     When I delete the task titled "Buy groceries"

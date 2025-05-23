@@ -49,6 +49,28 @@ namespace TaskTracker.Tests.Integration
         }
 
         [Fact]
+        public async Task Register_InvalidData_ReturnsBadRequest()
+        {
+            // Arrange
+            var dto1 = new UserRequestDto { Email = "invalid-email", Password = "Password123!" };
+            var dto2 = new UserRequestDto { Email = "user@test.com", Password = "" };
+
+            // Act
+            var response1 = await _client.PostAsJsonAsync("/api/auth/register", dto1);
+            var response2 = await _client.PostAsJsonAsync("/api/auth/register", dto2);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response1.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response2.StatusCode);
+            var result1 = await response1.Content.ReadAsStringAsync();
+            var result2 = await response2.Content.ReadAsStringAsync();
+            Assert.NotNull(result1);
+            Assert.NotNull(result2);
+            Assert.Contains("errors", result1);
+            Assert.Contains("errors", result2);
+        }
+
+        [Fact]
         public async Task Login_ExistingUser_ReturnsOkAndTokensInBodyAndHeader()
         {
             // Arrange
@@ -63,7 +85,6 @@ namespace TaskTracker.Tests.Integration
             Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
             Assert.True(loginResponse.Headers.Contains("X-Auth-Token"));
             Assert.True(loginResponse.Headers.Contains("X-Refresh-Token"));
-
 
             var result = await loginResponse.Content.ReadFromJsonAsync<ResultDto<TokensDto>>();
             Assert.NotNull(result);

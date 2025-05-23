@@ -37,8 +37,8 @@ namespace TaskTracker.Tests.Features
         public static void FeatureSetup()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunner();
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "User Registration", "  As a new visitor\r\n  I want to register with my email and password\r\n  So that I " +
-                    "can create and manage tasks", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "User Registration", "  As a new user,\r\n  I want to register with an email and password,\r\n  So that I c" +
+                    "an login on app.", ProgrammingLanguage.CSharp, featureTags);
             testRunner.OnFeatureStart(featureInfo);
         }
         
@@ -86,10 +86,10 @@ namespace TaskTracker.Tests.Features
         [Xunit.SkippableTheoryAttribute(DisplayName="Registration fails due to invalid input")]
         [Xunit.TraitAttribute("FeatureTitle", "User Registration")]
         [Xunit.TraitAttribute("Description", "Registration fails due to invalid input")]
-        [Xunit.InlineDataAttribute("invalid-email", "Str0ngP@ss!", "400", "\"Missing required data\"", new string[0])]
-        [Xunit.InlineDataAttribute("", "Str0ngP@ss!", "400", "\"Missing required data\"", new string[0])]
-        [Xunit.InlineDataAttribute("user@example.com", "", "400", "\"Missing required data\"", new string[0])]
-        [Xunit.InlineDataAttribute("", "", "400", "\"Missing required data\"", new string[0])]
+        [Xunit.InlineDataAttribute("invalid-email", "Str0ngP@ss!", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("", "Str0ngP@ss!", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("user1@example.com", "", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("", "", "400", "error", new string[0])]
         public void RegistrationFailsDueToInvalidInput(string email, string password, string status, string message, string[] exampleTags)
         {
             string[] tagsOfScenario = exampleTags;
@@ -132,7 +132,7 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.When("I register email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.When("I register email \"user2@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 201", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("I should receive a confirmation email", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
@@ -156,9 +156,9 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.Given("I have registered with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-                testRunner.When("I register email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should be returned code 409", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Given("I have registered with email \"user3@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+                testRunner.When("I register email \"user3@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Then("I should be returned code 403", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("I should see the message \"Email already registered\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();

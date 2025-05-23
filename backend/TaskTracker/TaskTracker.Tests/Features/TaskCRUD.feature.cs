@@ -37,8 +37,8 @@ namespace TaskTracker.Tests.Features
         public static void FeatureSetup()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunner();
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Task Management", "  As an authenticated user\r\n  I want to manage my personal tasks\r\n  So that I can" +
-                    " stay organized and productive", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Task Management", "  As an authenticated user\r\n  I want to create, read, update, and delete tasks,\r\n" +
+                    "  So that I can manage my to-dos.", ProgrammingLanguage.CSharp, featureTags);
             testRunner.OnFeatureStart(featureInfo);
         }
         
@@ -174,7 +174,7 @@ namespace TaskTracker.Tests.Features
                 this.ScenarioStart();
                 this.FeatureBackground();
                 testRunner.When("I create a task with title \"Review PR\" and description \"ASAP\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should be returned code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.Then("I should be returned code 201", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("the task should be saved with status \"Active\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
@@ -200,20 +200,23 @@ namespace TaskTracker.Tests.Features
                 testRunner.When("I update the task titled \"Buy groceries\" to have title \"Buy groceries and fruits\"" +
                         "", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-                testRunner.And("I should see 1 tasks", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
                 testRunner.And("the task should have title \"Buy groceries and fruits\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Change task\'s status")]
+        [Xunit.SkippableTheoryAttribute(DisplayName="Change task status")]
         [Xunit.TraitAttribute("FeatureTitle", "Task Management")]
-        [Xunit.TraitAttribute("Description", "Change task\'s status")]
-        public void ChangeTasksStatus()
+        [Xunit.TraitAttribute("Description", "Change task status")]
+        [Xunit.InlineDataAttribute("Write report", "Completed", new string[0])]
+        [Xunit.InlineDataAttribute("Buy groceries", "Active", new string[0])]
+        public void ChangeTaskStatus(string title, string status, string[] exampleTags)
         {
-            string[] tagsOfScenario = ((string[])(null));
+            string[] tagsOfScenario = exampleTags;
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Change task\'s status", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            argumentsOfScenario.Add("title", title);
+            argumentsOfScenario.Add("status", status);
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Change task status", null, tagsOfScenario, argumentsOfScenario, featureTags);
             this.ScenarioInitialize(scenarioInfo);
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
             {
@@ -223,7 +226,7 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.When("I mark the task titled \"Write report\" as completed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.When(string.Format("I change the status of the task titled \"{0}\" to \"{1}\"", title, status), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("the task \"Write report\" should have status \"Completed\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }

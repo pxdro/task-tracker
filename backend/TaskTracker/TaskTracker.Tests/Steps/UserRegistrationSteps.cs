@@ -1,27 +1,30 @@
-﻿using System.Net.Http.Json;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using System.Net.Http.Json;
 using TechTalk.SpecFlow;
 
 namespace TaskTracker.Tests.Steps
 {
-    /*[Binding]
-    public class UserRegistrationSteps(TestContext dbContext, ScenarioContext scnearioContext)
+    [Binding]
+    public class UserRegistrationSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
     {
-        private readonly TestContext _dbContext = dbContext;
-        private readonly ScenarioContext _scnearioContext = scnearioContext;
+        private readonly HttpClient _client = factory
+            .WithWebHostBuilder(builder => builder.UseEnvironment("Testing")).CreateClient();
+        private readonly ScenarioContext _ctx = ctx;
 
         [When(@"I register email ""(.*)"" and password ""(.*)""")]
         public async Task WhenIRegisterEmailAndPassword(string email, string password)
         {
             var dto = new { Email = email, Password = password };
-            var response = await _dbContext.Client.PostAsJsonAsync("/api/auth/register", dto);
-            _scnearioContext["response"] = response;
+            var response = await _client.PostAsJsonAsync("/api/auth/register", dto);
+            _ctx["response"] = response;
         }
 
         [Then(@"I should receive a confirmation email")]
         public void ThenIShouldReceiveAConfirmationEmail()
         {
-            var response = (HttpResponseMessage)_scnearioContext["response"]!;
+            var response = (HttpResponseMessage)_ctx["response"]!;
             Assert.True(response.Headers.Contains("X-Confirmation-Sent"));
         }
-    }*/
+    }
 }

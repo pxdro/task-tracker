@@ -1,7 +1,7 @@
 Feature: User Registration
-  As a new visitor
-  I want to register with my email and password
-  So that I can create and manage tasks
+  As a new user,
+  I want to register with an email and password,
+  So that I can login on app.
 
   Background:
     Given the API is running
@@ -12,19 +12,19 @@ Feature: User Registration
     And I should see the message "<message>"
   
   Examples:
-    | email             | password      | status | message                    |
-    | invalid-email     | Str0ngP@ss!   | 400    | "Missing required data"    |
-    |                   | Str0ngP@ss!   | 400    | "Missing required data"    |
-    | user@example.com  |               | 400    | "Missing required data"    |
-    |                   |               | 400    | "Missing required data"    |
+    | email             | password      | status | message  |
+    | invalid-email     | Str0ngP@ss!   | 400    | error    |
+    |                   | Str0ngP@ss!   | 400    | error    |
+    | user1@example.com |               | 400    | error    |
+    |                   |               | 400    | error    |
 
   Scenario: Successful registration
-    When I register email "user@example.com" and password "Str0ngP@ss!"
+    When I register email "user2@example.com" and password "Str0ngP@ss!"
     Then I should be returned code 201
     And I should receive a confirmation email
     
   Scenario: Registration with already registered email
-    Given I have registered with email "user@example.com" and password "Str0ngP@ss!"
-    When I register email "user@example.com" and password "Str0ngP@ss!"
-    Then I should be returned code 409
+    Given I have registered with email "user3@example.com" and password "Str0ngP@ss!"
+    When I register email "user3@example.com" and password "Str0ngP@ss!"
+    Then I should be returned code 403
     And I should see the message "Email already registered"

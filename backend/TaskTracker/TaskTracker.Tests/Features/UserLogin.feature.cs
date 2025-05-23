@@ -37,8 +37,8 @@ namespace TaskTracker.Tests.Features
         public static void FeatureSetup()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunner();
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "User Login", "  As a registered user\r\n  I want to log in with my email and password\r\n  So that " +
-                    "I can access my private task list", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "User Login", "  As a registered user,\r\n  I want to log in with my email and password,\r\n  So tha" +
+                    "t I can manage my tasks.", ProgrammingLanguage.CSharp, featureTags);
             testRunner.OnFeatureStart(featureInfo);
         }
         
@@ -83,6 +83,38 @@ namespace TaskTracker.Tests.Features
             this.TestTearDown();
         }
         
+        [Xunit.SkippableTheoryAttribute(DisplayName="Login fails due to invalid input")]
+        [Xunit.TraitAttribute("FeatureTitle", "User Login")]
+        [Xunit.TraitAttribute("Description", "Login fails due to invalid input")]
+        [Xunit.InlineDataAttribute("invalid-email", "Str0ngP@ss!", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("", "Str0ngP@ss!", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("user4@example.com", "", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("", "", "400", "error", new string[0])]
+        public void LoginFailsDueToInvalidInput(string email, string password, string status, string message, string[] exampleTags)
+        {
+            string[] tagsOfScenario = exampleTags;
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            argumentsOfScenario.Add("email", email);
+            argumentsOfScenario.Add("password", password);
+            argumentsOfScenario.Add("status", status);
+            argumentsOfScenario.Add("message", message);
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Login fails due to invalid input", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            this.ScenarioInitialize(scenarioInfo);
+            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                this.ScenarioStart();
+                this.FeatureBackground();
+                testRunner.When(string.Format("I login with email \"{0}\" and password \"{1}\"", email, password), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Then(string.Format("I should be returned code {0}", status), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And(string.Format("I should see the message \"{0}\"", message), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+            }
+            this.ScenarioCleanup();
+        }
+        
         [Xunit.SkippableFactAttribute(DisplayName="Successful login")]
         [Xunit.TraitAttribute("FeatureTitle", "User Login")]
         [Xunit.TraitAttribute("Description", "Successful login")]
@@ -100,11 +132,10 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.Given("I have registered with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-                testRunner.When("I login with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Given("I have registered with email \"user5@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+                testRunner.When("I login with email \"user5@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 200", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-                testRunner.And("I should receive a valid JWT auth token", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-                testRunner.And("I should receive a valid refresh token", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+                testRunner.And("I should receive valid tokens", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }
@@ -126,8 +157,8 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.When("I login with email \"unknown@example.com\" and password \"AnyPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then("I should be returned code 401", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.When("I login with email \"user6@example.com\" and password \"AnyPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Then("I should be returned code 404", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("I should see the message \"Email unregistered\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
@@ -150,8 +181,8 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.Given("I have registered with email \"user@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-                testRunner.When("I login with email \"user@example.com\" and password \"WrongPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Given("I have registered with email \"user7@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+                testRunner.When("I login with email \"user7@example.com\" and password \"WrongPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 401", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("I should see the message \"Invalid credentials\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }

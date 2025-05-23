@@ -3,13 +3,18 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Hosting;
+using System.Net;
+using TaskTracker.Application.DTOs;
+using Microsoft.AspNetCore.Mvc;
 
 namespace TaskTracker.Tests.Steps
 {
     [Binding]
     public class UserLoginSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
     {
-        private readonly HttpClient _client = factory.CreateClient();
+        private readonly HttpClient _client = factory
+            .WithWebHostBuilder(builder => builder.UseEnvironment("Testing")).CreateClient();
         private readonly ScenarioContext _ctx = ctx;
 
         [When(@"I login with email ""(.*)"" and password ""(.*)""")]
@@ -18,35 +23,21 @@ namespace TaskTracker.Tests.Steps
             var dto = new { Email = email, Password = password };
             var response = await _client.PostAsJsonAsync("/api/auth/login", dto);
             _ctx["response"] = response;
-
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(content);
-                var token = doc.RootElement.GetProperty("authToken").GetString();
-                _ctx["authToken"] = token;
-                _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
         }
 
-        [Then(@"I should receive a valid JWT auth token")]
-        public async Task ThenIShouldReceiveAValidJWTAuthToken()
+        [Then(@"I should receive valid tokens")]
+        public async Task ThenIShouldReceiveValidTokens()
         {
             var response = (HttpResponseMessage)_ctx["response"]!;
-            var content = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-            Assert.True(doc.RootElement.TryGetProperty("authToken", out var token));
-            Assert.False(string.IsNullOrWhiteSpace(token.GetString()));
-        }
+            var content = await response.Content.ReadFromJsonAsync<ResultDto<TokensDto>>();
 
-        [Then(@"I should receive a valid refresh token")]
-        public async Task ThenIShouldReceiveAValidRefreshToken()
-        {
-            var response = (HttpResponseMessage)_ctx["response"]!;
-            var content = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-            Assert.True(doc.RootElement.TryGetProperty("refreshToken", out var token));
-            Assert.False(string.IsNullOrWhiteSpace(token.GetString()));
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.True(response.Headers.Contains("X-Auth-Token"));
+            Assert.True(response.Headers.Contains("X-Refresh-Token"));
+            Assert.NotNull(content);
+            Assert.Null(content?.ErrorMessage);
+            Assert.NotNull(content?.Data?.AuthToken);
+            Assert.NotNull(content?.Data?.RefreshToken);
         }
     }
 }

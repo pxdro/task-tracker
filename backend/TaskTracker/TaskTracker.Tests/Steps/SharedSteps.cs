@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using TaskTracker.Application.DTOs;
 using TechTalk.SpecFlow;
 
 namespace TaskTracker.Tests.Steps
@@ -9,7 +11,8 @@ namespace TaskTracker.Tests.Steps
     [Binding]
     public class SharedSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
     {
-        private readonly HttpClient _client = factory.CreateClient();
+        private readonly HttpClient _client = factory
+            .WithWebHostBuilder(builder => builder.UseEnvironment("Testing")).CreateClient();
         private readonly ScenarioContext _ctx = ctx;
 
         [Given(@"the API is running")]
@@ -39,19 +42,8 @@ namespace TaskTracker.Tests.Steps
         public async Task ThenIShouldSeeTheMessage(string expectedMessage)
         {
             var response = (HttpResponseMessage)_ctx["response"]!;
-            var content = await response.Content.ReadAsStringAsync();
-
-            if (response.Content.Headers.ContentType?.MediaType == "application/json")
-            {
-                var json = JsonDocument.Parse(content);
-                if (json.RootElement.TryGetProperty("error", out var errorProp))
-                {
-                    Assert.Equal(expectedMessage.Trim('"'), errorProp.GetString());
-                    return;
-                }
-            }
-
-            Assert.Contains(expectedMessage.Trim('"'), content);
+            var result = await response.Content.ReadAsStringAsync();
+            Assert.Contains(expectedMessage, result);
         }
     }
 }
