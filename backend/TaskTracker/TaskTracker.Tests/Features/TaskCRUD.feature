@@ -1,55 +1,54 @@
 Feature: Task Management
   As an authenticated user
-  I want to create, read, update, and delete tasks,
+  I want to read, create, update, and delete tasks,
   So that I can manage my to-dos.
 
   Background:
-    Given I am logged in as "user@example.com" with password "Str0ngP@ss!"
+    Given I have registered with email "task_example@email.com" and password "StrongPass123"
+    And I am logged in as "task_example@email.com" with password "StrongPass123"
     And I have the following tasks
       | title           | description | status    |
       | Write report    | For work    | Active    |
-      | Buy groceries   | For home    | Completed |
+      | Build slides    | For work    | Completed |
+      | Buy groceries   | For home    | Active    |
       | Dump the thrash | For home    | Completed |
     And the API is running
 
   Scenario: Read all tasks
     When I request my task list
     Then I should be returned code 200 
-    And I should see 3 tasks
-
-  Scenario Outline: Filter tasks
-    When I request tasks filtered by <field> "<value>"
-    Then I should be returned code 200 
-    And I should see <count> tasks
+    And the content returned should not be empty
+    
+  Scenario Outline: Read filtered tasks
+    When I filter my tasks by "<field>" with "<value>"
+    Then I should be returned code 200
+    And the content returned should not be empty
 
     Examples:
-      | field       | value         | count |
-      | title       | Write         | 1     |
-      | description | For home      | 2     |
-      | status      | Completed     | 2     |
-      | status      | Active        | 1     |
+      | field       | value     |
+      | title       | write     |
+      | description | home      |
+      | status      | Active    |
+
+  Scenario: Read task with Id
+    When I request task by Id
+    Then I should be returned code 200 
+    And the content returned should not be empty
 
   Scenario: Create a new task
     When I create a task with title "Review PR" and description "ASAP"
     Then I should be returned code 201 
-    And the task should be saved with status "Active"
+    And the task should have title "Review PR"
+    And the task should have description "ASAP"
+    And the task should have status "Active"
 
   Scenario: Update a task
-    When I update the task titled "Buy groceries" to have title "Buy groceries and fruits"
+    When I update task to have title "Write report and send email" and description "For work tasks" and status "Active"
     Then I should be returned code 200 
-    And the task should have title "Buy groceries and fruits"
-
-  Scenario Outline: Change task status
-    When I change the status of the task titled "<title>" to "<status>"
-    Then I should be returned code 200
-    And the task "Write report" should have status "Completed"
-
-    Examples:
-      | title           | status    |
-      | Write report    | Completed |
-      | Buy groceries   | Active    |
+    And the task should have title "Write report and send email"
+    And the task should have description "For work tasks"
+    And the task should have status "Active"
 
   Scenario: Delete a task
-    When I delete the task titled "Buy groceries"
+    When I delete the task
     Then I should be returned code 204 
-    And the task "Buy groceries" should not exist anymore

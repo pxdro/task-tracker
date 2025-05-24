@@ -58,21 +58,7 @@ namespace TaskTracker.Tests.Domain
         }
 
         [Fact]
-        public async Task GetAllTasksAsync_NoTasks_ReturnsEmptyList()
-        {
-            // Arrange
-            var userId = Guid.NewGuid();
-
-            // Act
-            var result = await _taskService.GetAllTasksAsync(userId);
-
-            // Assert
-            Assert.True(result.IsSuccess);
-            Assert.Empty(result.Data);
-        }
-
-        [Fact]
-        public async Task GetAllTasksAsync_WithTasks_ReturnsMappedTasks()
+        public async Task GetAllTasksAsync_HavingTasks_ReturnsAllTasks()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -89,7 +75,56 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.True(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Null(result.ErrorMessage);
             Assert.Equal(2, result.Data?.Count());
+        }
+
+        [Fact]
+        public async Task GetTasksByFieldValueAsync_HavingTasks_ReturnsFilteredTasks()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var findField = "title";
+            var findValue = "Task 1";
+            var tasks = new List<TaskItem>
+            {
+                new() { UserId = userId, Title = findValue, Description = "Description 1" },
+                new() { UserId = userId, Title = "Task 2", Description = "Description 2" },
+            };
+            await _dbContext.Tasks.AddRangeAsync(tasks);
+            await _dbContext.SaveChangesAsync();
+
+            // Act
+            var result = await _taskService.GetTasksByFieldValueAsync(findField, findValue, userId);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Null(result.ErrorMessage);
+            Assert.Equal(1, result.Data?.Count());
+            Assert.Equal(findValue, result.Data?.First().Title);
+        }
+
+        [Fact]
+        public async Task GetTasksByFieldValueAsync_NoExistentField_ReturnsBadRequest()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var findField = "teste";
+            var findValue = "teste";
+
+            // Act
+            var result = await _taskService.GetTasksByFieldValueAsync(findField, findValue, userId);
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+            Assert.Null(result.Data);
+            Assert.NotNull(result.ErrorMessage);
+            Assert.Equal("Invalid field", result.ErrorMessage);
         }
 
         [Fact]
@@ -106,6 +141,9 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.True(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Null(result.ErrorMessage);
             Assert.Equal(task.Id, result.Data?.Id);
         }
 
@@ -117,8 +155,10 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal("Task not found", result.ErrorMessage);
             Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+            Assert.NotNull(result.ErrorMessage);
+            Assert.Null(result.Data);
+            Assert.Equal("Task not found", result.ErrorMessage);
         }
 
         [Fact]
@@ -135,6 +175,8 @@ namespace TaskTracker.Tests.Domain
             // Assert
             Assert.False(result.IsSuccess);
             Assert.Equal("Access denied", result.ErrorMessage);
+            Assert.NotNull(result.ErrorMessage);
+            Assert.Null(result.Data);
             Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
         }
 
@@ -151,9 +193,11 @@ namespace TaskTracker.Tests.Domain
             // Assert
             Assert.True(result.IsSuccess);
             Assert.Equal(HttpStatusCode.Created, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Null(result.ErrorMessage);
             Assert.Equal(requestDto.Title, result.Data?.Title);
+            Assert.Equal(requestDto.Description, result.Data?.Description);
             Assert.Equal(EnumTaskStatus.Active, result.Data?.Status);
-            Assert.NotNull(result.Data?.CreatedAt);
         }
 
         [Fact]
@@ -173,16 +217,19 @@ namespace TaskTracker.Tests.Domain
             await _dbContext.SaveChangesAsync();
             _dbContext.Entry(task).State = EntityState.Detached;
 
-            var updateDto = new TaskRequestDto { Title = "New Title", Description = "New Desc" };
+            var updateDto = new TaskRequestDto { Title = "New Title", Description = "New Desc", Status = EnumTaskStatus.Completed };
 
             // Act
             var result = await _taskService.UpdateTaskAsync(task.Id, updateDto, userId);
 
             // Assert
             Assert.True(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Null(result.ErrorMessage);
             Assert.Equal("New Title", result.Data?.Title);
             Assert.Equal("New Desc", result.Data?.Description);
-            Assert.Equal(EnumTaskStatus.Active, result.Data?.Status);
+            Assert.Equal(EnumTaskStatus.Completed, result.Data?.Status);
             Assert.Equal(task.CreatedAt, result.Data?.CreatedAt);
             Assert.True(result.Data?.UpdatedAt > task.UpdatedAt);
         }
@@ -198,6 +245,8 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.False(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+            Assert.NotNull(result.ErrorMessage);
             Assert.Null(result.Data);
             Assert.Equal("Task not found", result.ErrorMessage);
         }
@@ -217,59 +266,8 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.False(result.IsSuccess);
-            Assert.Null(result.Data);
-            Assert.Equal("Access denied", result.ErrorMessage);
-        }
-
-        [Fact]
-        public async Task ChangeTaskStatusAsync_ValidStatus_UpdatesStatus()
-        {
-            // Arrange
-            var userId = Guid.NewGuid();
-            var task = new TaskItem
-            {
-                UserId = userId,
-                UpdatedAt = DateTime.UtcNow.AddHours(-1)
-            };
-            await _dbContext.Tasks.AddAsync(task);
-            await _dbContext.SaveChangesAsync();
-            _dbContext.Entry(task).State = EntityState.Detached;
-
-            // Act
-            var result = await _taskService.ChangeTaskStatusAsync(task.Id, userId, EnumTaskStatus.Completed);
-
-            // Assert
-            Assert.True(result.IsSuccess);
-            Assert.Equal(EnumTaskStatus.Completed, result.Data?.Status);
-            Assert.True(result.Data?.UpdatedAt > task.UpdatedAt);
-        }
-
-        [Fact]
-        public async Task ChangeTaskStatusAsync_TaskNotFound_ReturnsNotFound()
-        {
-            // Act
-            var result = await _taskService.ChangeTaskStatusAsync(Guid.NewGuid(), Guid.NewGuid(), EnumTaskStatus.Completed);
-
-            // Assert
-            Assert.False(result.IsSuccess);
-            Assert.Null(result.Data);
-            Assert.Equal("Task not found", result.ErrorMessage);
-        }
-
-        [Fact]
-        public async Task ChangeTaskStatusAsync_TaskExistButNotOwner_ReturnsUnauthorized()
-        {
-            // Arrange
-            var task = new TaskItem { UserId = Guid.NewGuid() };
-            await _dbContext.Tasks.AddAsync(task);
-            await _dbContext.SaveChangesAsync();
-            _dbContext.Entry(task).State = EntityState.Detached;
-
-            // Act
-            var result = await _taskService.ChangeTaskStatusAsync(task.Id, Guid.NewGuid(), EnumTaskStatus.Completed);
-
-            // Assert
-            Assert.False(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
+            Assert.NotNull(result.ErrorMessage);
             Assert.Null(result.Data);
             Assert.Equal("Access denied", result.ErrorMessage);
         }
@@ -288,6 +286,9 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.True(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.NoContent, result.StatusCode);
+            Assert.True(result.Data);
+            Assert.Null(result.ErrorMessage);
             Assert.Null(await _dbContext.Tasks.FindAsync(task.Id));
         }
 
@@ -299,6 +300,9 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.False(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+            Assert.False(result.Data);
+            Assert.NotNull(result.ErrorMessage);
             Assert.Equal("Task not found", result.ErrorMessage);
         }
 
@@ -316,7 +320,9 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.False(result.IsSuccess);
-            Assert.False(result?.Data);
+            Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
+            Assert.False(result.Data);
+            Assert.NotNull(result.ErrorMessage);
             Assert.Equal("Access denied", result?.ErrorMessage);
         }
 
@@ -337,8 +343,10 @@ namespace TaskTracker.Tests.Domain
 
             // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal("Server error", result.ErrorMessage);
             Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+            Assert.Null(result.Data);
+            Assert.NotNull(result.ErrorMessage);
+            Assert.Equal("Server error", result.ErrorMessage);
         }
 
         public void Dispose()

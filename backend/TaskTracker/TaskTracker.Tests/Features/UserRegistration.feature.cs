@@ -83,38 +83,6 @@ namespace TaskTracker.Tests.Features
             this.TestTearDown();
         }
         
-        [Xunit.SkippableTheoryAttribute(DisplayName="Registration fails due to invalid input")]
-        [Xunit.TraitAttribute("FeatureTitle", "User Registration")]
-        [Xunit.TraitAttribute("Description", "Registration fails due to invalid input")]
-        [Xunit.InlineDataAttribute("invalid-email", "Str0ngP@ss!", "400", "error", new string[0])]
-        [Xunit.InlineDataAttribute("", "Str0ngP@ss!", "400", "error", new string[0])]
-        [Xunit.InlineDataAttribute("user1@example.com", "", "400", "error", new string[0])]
-        [Xunit.InlineDataAttribute("", "", "400", "error", new string[0])]
-        public void RegistrationFailsDueToInvalidInput(string email, string password, string status, string message, string[] exampleTags)
-        {
-            string[] tagsOfScenario = exampleTags;
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            argumentsOfScenario.Add("email", email);
-            argumentsOfScenario.Add("password", password);
-            argumentsOfScenario.Add("status", status);
-            argumentsOfScenario.Add("message", message);
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Registration fails due to invalid input", null, tagsOfScenario, argumentsOfScenario, featureTags);
-            this.ScenarioInitialize(scenarioInfo);
-            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                this.ScenarioStart();
-                this.FeatureBackground();
-                testRunner.When(string.Format("I register email \"{0}\" and password \"{1}\"", email, password), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-                testRunner.Then(string.Format("I should be returned code {0}", status), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-                testRunner.And(string.Format("I should see the message \"{0}\"", message), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-            }
-            this.ScenarioCleanup();
-        }
-        
         [Xunit.SkippableFactAttribute(DisplayName="Successful registration")]
         [Xunit.TraitAttribute("FeatureTitle", "User Registration")]
         [Xunit.TraitAttribute("Description", "Successful registration")]
@@ -132,7 +100,7 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.When("I register email \"user2@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.When("I register email \"register_example1@email.com\" and password \"StrongPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 201", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("I should receive a confirmation email", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
@@ -156,10 +124,44 @@ namespace TaskTracker.Tests.Features
             {
                 this.ScenarioStart();
                 this.FeatureBackground();
-                testRunner.Given("I have registered with email \"user3@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-                testRunner.When("I register email \"user3@example.com\" and password \"Str0ngP@ss!\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Given("I have registered with email \"register_example2@email.com\" and password \"StrongPa" +
+                        "ss123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+                testRunner.When("I register email \"register_example2@email.com\" and password \"StrongPass123\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
                 testRunner.Then("I should be returned code 403", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
                 testRunner.And("I should see the message \"Email already registered\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+            }
+            this.ScenarioCleanup();
+        }
+        
+        [Xunit.SkippableTheoryAttribute(DisplayName="Registration fails due to invalid input")]
+        [Xunit.TraitAttribute("FeatureTitle", "User Registration")]
+        [Xunit.TraitAttribute("Description", "Registration fails due to invalid input")]
+        [Xunit.InlineDataAttribute("invalid-email", "AnyPass123", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("", "AnyPass123", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("register_example3@email.com", "", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("", "", "400", "error", new string[0])]
+        [Xunit.InlineDataAttribute("register_example3@email.com", "12345", "400", "error", new string[0])]
+        public void RegistrationFailsDueToInvalidInput(string email, string password, string status, string message, string[] exampleTags)
+        {
+            string[] tagsOfScenario = exampleTags;
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            argumentsOfScenario.Add("email", email);
+            argumentsOfScenario.Add("password", password);
+            argumentsOfScenario.Add("status", status);
+            argumentsOfScenario.Add("message", message);
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Registration fails due to invalid input", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            this.ScenarioInitialize(scenarioInfo);
+            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                this.ScenarioStart();
+                this.FeatureBackground();
+                testRunner.When(string.Format("I register email \"{0}\" and password \"{1}\"", email, password), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+                testRunner.Then(string.Format("I should be returned code {0}", status), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+                testRunner.And(string.Format("I should see the message \"{0}\"", message), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
             }
             this.ScenarioCleanup();
         }

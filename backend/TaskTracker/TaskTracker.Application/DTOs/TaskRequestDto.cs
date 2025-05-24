@@ -10,5 +10,7 @@ namespace TaskTracker.Application.DTOs
 
         [MaxLength(250)]
         public string? Description { get; set; }
+
+        public EnumTaskStatus Status { get; set; }
     }
 }

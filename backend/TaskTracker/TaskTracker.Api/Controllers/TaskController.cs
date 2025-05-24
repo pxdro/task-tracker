@@ -22,6 +22,14 @@ namespace TaskTracker.Api.Controllers
             return StatusCode((int)result.StatusCode, result);
         }
 
+        [HttpGet("filter")]
+        public async Task<IActionResult> GetByFilter(string field, string value)
+        {
+            var userId = GetCurrentUserId();
+            var result = await _taskService.GetTasksByFieldValueAsync(field, value, userId);
+            return StatusCode((int)result.StatusCode, result);
+        }
+
         [HttpGet("{taskId}")]
         public async Task<IActionResult> GetById(Guid taskId)
         {
@@ -43,22 +51,6 @@ namespace TaskTracker.Api.Controllers
         {
             var userId = GetCurrentUserId();
             var result = await _taskService.UpdateTaskAsync(taskId, dto, userId);
-            return StatusCode((int)result.StatusCode, result);
-        }
-
-        [HttpPatch("{taskId}/active")]
-        public async Task<IActionResult> MarkAsActive(Guid taskId)
-        {
-            var userId = GetCurrentUserId();
-            var result = await _taskService.ChangeTaskStatusAsync(taskId, userId, EnumTaskStatus.Active);
-            return StatusCode((int)result.StatusCode, result);
-        }
-
-        [HttpPatch("{taskId}/completed")]
-        public async Task<IActionResult> MarkAsCompleted(Guid taskId)
-        {
-            var userId = GetCurrentUserId();
-            var result = await _taskService.ChangeTaskStatusAsync(taskId, userId, EnumTaskStatus.Completed);
             return StatusCode((int)result.StatusCode, result);
         }
 

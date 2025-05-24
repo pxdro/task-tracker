@@ -36,7 +36,7 @@ namespace TaskTracker.Tests.Integration
         }
 
         [Fact]
-        public async Task GetAll_AuthenticatedUser_ReturnsUserTasks()
+        public async Task GetAll_ReturnsUserTasks()
         {
             // Arrange
             await AuthenticateAsync();
@@ -50,7 +50,47 @@ namespace TaskTracker.Tests.Integration
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<IEnumerable<TaskReturnDto>>>();
             Assert.NotNull(result?.Data);
+            Assert.Null(result?.ErrorMessage);
             Assert.True(result?.Data?.Any());
+        }
+
+        [Fact]
+        public async Task GetByFilter_ReturnsUserFilteredTasks()
+        {
+            // Arrange
+            await AuthenticateAsync();
+            await CreateTaskViaEndpointAsync();
+
+            // Act
+            var response = await _client.GetAsync("/api/tasks/filter?field=title&value=Test");
+
+            // Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<ResultDto<IEnumerable<TaskReturnDto>>>();
+            Assert.NotNull(result?.Data);
+            Assert.Null(result?.ErrorMessage);
+            Assert.True(result?.Data?.Any());
+            foreach (var task in result?.Data!)
+            {
+                Assert.Contains("Test", task.Title);
+            }
+        }
+
+        [Fact]
+        public async Task GetByFilter_InvalidField_ReturnsBadRequest()
+        {
+            // Arrange
+            await AuthenticateAsync();
+
+            // Act
+            var response = await _client.GetAsync("/api/tasks/filter?field=test&value=Test");
+
+            // Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<ResultDto<IEnumerable<TaskReturnDto>>>();
+            Assert.Null(result?.Data);
+            Assert.NotNull(result?.ErrorMessage);
+            Assert.Equal("Invalid field", result?.ErrorMessage);
         }
 
         [Fact]
@@ -66,6 +106,8 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
+            Assert.NotNull(result?.Data);
+            Assert.Null(result?.ErrorMessage);
             Assert.Equal("Test Task", result?.Data?.Title);
         }
 
@@ -81,8 +123,9 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
+            Assert.Null(result?.Data);
+            Assert.NotNull(result?.ErrorMessage);
             Assert.Equal("Task not found", result?.ErrorMessage);
-            Assert.Null(result?.Data?.Title);
         }
 
         [Fact]
@@ -100,8 +143,9 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
+            Assert.Null(result?.Data);
+            Assert.NotNull(result?.ErrorMessage);
             Assert.Equal("Access denied", result?.ErrorMessage);
-            Assert.Null(result?.Data?.Title);
         }
 
         [Fact]
@@ -118,6 +162,7 @@ namespace TaskTracker.Tests.Integration
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
             Assert.NotNull(result?.Data);
+            Assert.Null(result?.ErrorMessage);
             Assert.Equal("Other Test Task", result?.Data?.Title);
             Assert.Equal("Other Test Description", result?.Data?.Description);
             Assert.Equal(EnumTaskStatus.Active, result?.Data?.Status);
@@ -129,7 +174,7 @@ namespace TaskTracker.Tests.Integration
             // Arrange
             await AuthenticateAsync();
             var taskId = await CreateTaskViaEndpointAsync();
-            var updateDto = new TaskRequestDto { Title = "Updated Title" };
+            var updateDto = new TaskRequestDto { Title = "New title", Description = "New description", Status = EnumTaskStatus.Completed };
 
             // Act
             var response = await _client.PutAsJsonAsync($"/api/tasks/{taskId}", updateDto);
@@ -137,7 +182,11 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
-            Assert.Equal("Updated Title", result?.Data?.Title);
+            Assert.NotNull(result?.Data);
+            Assert.Null(result?.ErrorMessage);
+            Assert.Equal("New title", result?.Data?.Title);
+            Assert.Equal("New description", result?.Data?.Description);
+            Assert.Equal(EnumTaskStatus.Completed, result?.Data?.Status);
         }
 
         [Fact]
@@ -153,8 +202,9 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
-            Assert.Equal("Task not found", result?.ErrorMessage);
             Assert.Null(result?.Data);
+            Assert.NotNull(result?.ErrorMessage);
+            Assert.Equal("Task not found", result?.ErrorMessage);
         }
 
         [Fact]
@@ -173,59 +223,9 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
+            Assert.Null(result?.Data);
+            Assert.NotNull(result?.ErrorMessage);
             Assert.Equal("Access denied", result?.ErrorMessage);
-            Assert.Null(result?.Data);
-        }
-
-        [Fact]
-        public async Task MarkAsCompleted_ValidTask_ReturnsUpdatedStatus()
-        {
-            // Arrange
-            await AuthenticateAsync();
-            var taskId = await CreateTaskViaEndpointAsync();
-
-            // Act
-            var response = await _client.PatchAsync($"/api/tasks/{taskId}/completed", null);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
-            Assert.Equal(EnumTaskStatus.Completed, result?.Data?.Status);
-        }
-
-        [Fact]
-        public async Task MarkAsCompleted_NoExistentTask_ReturnsNotFound()
-        {
-            // Arrange
-            await AuthenticateAsync();
-
-            // Act
-            var response = await _client.PatchAsync($"/api/tasks/{Guid.NewGuid()}/completed", null);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
-            Assert.Equal("Task not found", result?.ErrorMessage);
-            Assert.Null(result?.Data);
-        }
-
-        [Fact]
-        public async Task MarkAsCompleted_OtherUserTask_ReturnsUnauthorized()
-        {
-            // Arrange
-            await AuthenticateAsync();
-            var taskId = await CreateTaskViaEndpointAsync();
-            await AuthenticateAsync("otheruser@example.com");
-            await CreateTaskViaEndpointAsync();
-
-            // Act
-            var response = await _client.PatchAsync($"/api/tasks/{taskId}/completed", null);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
-            Assert.Equal("Access denied", result?.ErrorMessage);
-            Assert.Null(result?.Data);
         }
 
         [Fact]
@@ -241,9 +241,8 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<bool>>();
-            Assert.Null(result?.ErrorMessage);
-            Assert.NotNull(result?.Data);
             Assert.True(result?.Data);
+            Assert.Null(result?.ErrorMessage);
         }
 
         [Fact]
@@ -258,8 +257,9 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<bool>>();
-            Assert.Equal("Task not found", result?.ErrorMessage);
             Assert.False(result?.Data);
+            Assert.NotNull(result?.ErrorMessage);
+            Assert.Equal("Task not found", result?.ErrorMessage);
         }
 
         [Fact]
@@ -277,8 +277,9 @@ namespace TaskTracker.Tests.Integration
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<bool>>();
-            Assert.Equal("Access denied", result?.ErrorMessage);
             Assert.False(result?.Data);
+            Assert.NotNull(result?.ErrorMessage);
+            Assert.Equal("Access denied", result?.ErrorMessage);
         }
     }
 }

@@ -1,6 +1,10 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Net.Http.Json;
+using TaskTracker.Infrastructure.Context;
 using TechTalk.SpecFlow;
 
 namespace TaskTracker.Tests.Steps

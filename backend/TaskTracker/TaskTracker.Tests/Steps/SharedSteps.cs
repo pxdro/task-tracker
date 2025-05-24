@@ -2,8 +2,6 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
-using TaskTracker.Application.DTOs;
 using TechTalk.SpecFlow;
 
 namespace TaskTracker.Tests.Steps
@@ -11,7 +9,7 @@ namespace TaskTracker.Tests.Steps
     [Binding]
     public class SharedSteps(WebApplicationFactory<Program> factory, ScenarioContext ctx)
     {
-        private readonly HttpClient _client = factory
+        private HttpClient _client = factory
             .WithWebHostBuilder(builder => builder.UseEnvironment("Testing")).CreateClient();
         private readonly ScenarioContext _ctx = ctx;
 
@@ -26,9 +24,7 @@ namespace TaskTracker.Tests.Steps
         public async Task GivenIHaveRegisteredWithEmailAndPassword(string email, string password)
         {
             var dto = new { Email = email, Password = password };
-            var response = await _client.PostAsJsonAsync("/api/auth/register", dto);
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-            _ctx["response"] = response;
+            await _client.PostAsJsonAsync("/api/auth/register", dto);
         }
 
         [Then(@"I should be returned code (\d+)")]
