@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace TaskTracker.Application.Enums
+namespace TaskTracker.Domain.Enums
 {
     // Ensure return names instead of numbers
     [JsonConverter(typeof(JsonStringEnumConverter))]

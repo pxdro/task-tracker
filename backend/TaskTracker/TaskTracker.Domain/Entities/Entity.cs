@@ -1,4 +1,4 @@
-﻿namespace TaskTracker.Application.Entities
+﻿namespace TaskTracker.Domain.Entities
 {
     public abstract class Entity
     {

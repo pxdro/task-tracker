@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using System.Net;
 using TaskTracker.Application.DTOs;
-using TaskTracker.Application.Entities;
-using TaskTracker.Application.Enums;
+using TaskTracker.Domain.Entities;
+using TaskTracker.Domain.Enums;
 using TaskTracker.Application.Interfaces;
 using TaskTracker.Infrastructure.Context;
 

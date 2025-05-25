@@ -2,10 +2,9 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using System.Net;
-using System.Threading.Tasks;
 using TaskTracker.Application.DTOs;
-using TaskTracker.Application.Entities;
-using TaskTracker.Application.Enums;
+using TaskTracker.Domain.Entities;
+using TaskTracker.Domain.Enums;
 using TaskTracker.Infrastructure.Context;
 using TaskTracker.Infrastructure.Services;
 

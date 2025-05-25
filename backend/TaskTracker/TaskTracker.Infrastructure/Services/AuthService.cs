@@ -7,7 +7,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using TaskTracker.Application.DTOs;
-using TaskTracker.Application.Entities;
+using TaskTracker.Domain.Entities;
 using TaskTracker.Application.Interfaces;
 using TaskTracker.Infrastructure.Context;
 

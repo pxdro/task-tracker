@@ -1,18 +1,11 @@
-﻿using Azure;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 using TaskTracker.Application.DTOs;
-using TaskTracker.Application.Entities;
-using TaskTracker.Application.Enums;
-using TaskTracker.Infrastructure.Context;
+using TaskTracker.Domain.Enums;
 using TechTalk.SpecFlow;
-using TechTalk.SpecFlow.CommonModels;
 
 namespace TaskTracker.Tests.Steps
 {
@@ -137,7 +130,7 @@ namespace TaskTracker.Tests.Steps
         }
 
         [Then(@"the task should have description ""(.*)""")]
-        public async Task ThenTheTaskShouldHaveDescription(string description)
+        public void ThenTheTaskShouldHaveDescription(string description)
         {
             var task = _ctx.Get<TaskReturnDto>("lastTask");
 
@@ -146,7 +139,7 @@ namespace TaskTracker.Tests.Steps
         }
 
         [Then(@"the task should have status ""(.*)""")]
-        public async Task ThenTheTaskShouldHaveStatus(EnumTaskStatus status)
+        public void ThenTheTaskShouldHaveStatus(EnumTaskStatus status)
         {
             var task = _ctx.Get<TaskReturnDto>("lastTask");
 

@@ -1,11 +1,10 @@
 ﻿using System.Net.Http.Json;
 using System.Net;
-using TaskTracker.Application.Enums;
+using TaskTracker.Domain.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 using System.Net.Http.Headers;
 using TaskTracker.Application.DTOs;
-using System.Threading.Tasks;
 
 namespace TaskTracker.Tests.Integration
 {

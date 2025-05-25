@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using TaskTracker.Application.DTOs;
-using TaskTracker.Application.Entities;
+using TaskTracker.Domain.Entities;
 
 namespace TaskTracker.Application.Profiles
 {

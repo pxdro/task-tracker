@@ -1,5 +1,4 @@
 ﻿using TaskTracker.Application.DTOs;
-using TaskTracker.Application.Enums;
 
 namespace TaskTracker.Application.Interfaces
 {

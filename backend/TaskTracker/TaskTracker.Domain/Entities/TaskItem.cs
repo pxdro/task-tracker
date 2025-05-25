@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using TaskTracker.Application.Enums;
+using TaskTracker.Domain.Enums;
 
-namespace TaskTracker.Application.Entities
+namespace TaskTracker.Domain.Entities
 {
     public class TaskItem : Entity
     {

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Moq;
 using System.Net;
 using TaskTracker.Application.DTOs;
-using TaskTracker.Application.Entities;
+using TaskTracker.Domain.Entities;
 using TaskTracker.Application.Interfaces;
 using TaskTracker.Infrastructure.Context;
 using TaskTracker.Infrastructure.Services;

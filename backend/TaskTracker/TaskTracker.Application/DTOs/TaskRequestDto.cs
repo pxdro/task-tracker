@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using TaskTracker.Application.Enums;
+using TaskTracker.Domain.Enums;
 
 namespace TaskTracker.Application.DTOs
 {

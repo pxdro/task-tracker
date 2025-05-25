@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TaskTracker.Application.Entities
+namespace TaskTracker.Domain.Entities
 {
     public class User : Entity
     {
