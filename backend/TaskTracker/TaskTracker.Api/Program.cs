@@ -1,9 +1,11 @@
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TaskTracker.Application.Interfaces;
 using TaskTracker.Application.Profiles;
+using TaskTracker.Infrastructure.Consumers;
 using TaskTracker.Infrastructure.Context;
 using TaskTracker.Infrastructure.Services;
 
@@ -40,6 +42,36 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero,
         };
     });
+
+// Add MassTransit and RabbitMQ settings
+var rabbitMqSettings = builder.Configuration.GetSection("RabbitMq");
+var rabbitMqHost = rabbitMqSettings["Host"];
+var rabbitMqUser = rabbitMqSettings["User"];
+var rabbitMqPassword = rabbitMqSettings["Password"];
+if (rabbitMqHost != null && rabbitMqUser != null && rabbitMqPassword != null)
+{
+    builder.Services.AddMassTransit(x =>
+    {
+        // Consumer registration
+        x.AddConsumer<TaskCreatedOrUpdatedConsumer>();
+
+        // Bus registration
+        x.UsingRabbitMq((context, cfg) =>
+        {
+            cfg.Host(rabbitMqHost, h =>
+            {
+                h.Username(rabbitMqUser);
+                h.Password(rabbitMqPassword);
+            });
+
+            // Queue creation attached to consumer
+            cfg.ReceiveEndpoint("task-tracker-task-events", e =>
+            {
+                e.ConfigureConsumer<TaskCreatedOrUpdatedConsumer>(context);
+            });
+        });
+    });
+}
 
 // Add services to the container.
 builder.Services.AddAuthorization();                    // Auth

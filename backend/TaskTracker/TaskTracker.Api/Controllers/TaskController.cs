@@ -9,7 +9,7 @@ namespace TaskTracker.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class TasksController(ITaskService taskService) : ControllerBase
+    public class TaskController(ITaskService taskService) : ControllerBase
     {
         private readonly ITaskService _taskService = taskService;
 
@@ -58,6 +58,20 @@ namespace TaskTracker.Api.Controllers
         {
             var userId = GetCurrentUserId();
             var result = await _taskService.DeleteTaskAsync(taskId, userId);
+            return StatusCode((int)result.StatusCode, result);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("smoke")]
+        public async Task<IActionResult> SmokeTest()
+        {
+            var userId = GetCurrentUserId();
+            var dto = new TaskRequestDto
+            {
+                Title = "Smoke Test",
+                Description = "RabbitMQ publish test",
+            };
+            var result = await _taskService.CreateTaskAsync(dto, userId);
             return StatusCode((int)result.StatusCode, result);
         }
 

@@ -7,13 +7,15 @@ using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Enums;
 using TaskTracker.Application.Interfaces;
 using TaskTracker.Infrastructure.Context;
+using MassTransit;
 
 namespace TaskTracker.Infrastructure.Services
 {
-    public class TaskService(TaskTrackerDbContext context, IMapper mapper) : ITaskService
+    public class TaskService(TaskTrackerDbContext context, IMapper mapper, IPublishEndpoint publisher) : ITaskService
     {
         private readonly TaskTrackerDbContext _context = context;
         private readonly IMapper _mapper = mapper;
+        private readonly IPublishEndpoint _publisher = publisher;
 
         public async Task<ResultDto<IEnumerable<TaskReturnDto>>> GetAllTasksAsync(Guid userId)
         {
@@ -102,6 +104,16 @@ namespace TaskTracker.Infrastructure.Services
 
                 await _context.Tasks.AddAsync(task);
                 await _context.SaveChangesAsync();
+
+                var evt = new TaskCreatedOrUpdatedEventDto
+                { 
+                    TaskId = task.Id,
+                    UserId = userId,
+                    Title = task.Title,
+                    Description = task.Description,
+                    Status = task.Status,
+                };
+                await _publisher.Publish(evt, ctx => ctx.SetRoutingKey("task.created"));
 
                 return ResultDto<TaskReturnDto>.Success(_mapper.Map<TaskReturnDto>(task), HttpStatusCode.Created);
             }

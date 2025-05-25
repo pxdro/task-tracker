@@ -29,7 +29,7 @@ namespace TaskTracker.Tests.Integration
         private async Task<Guid?> CreateTaskViaEndpointAsync()
         {
             var taskDto = new TaskRequestDto { Title = "Test Task", Description = "Test Description" };
-            var response = await _client.PostAsJsonAsync("/api/tasks", taskDto);
+            var response = await _client.PostAsJsonAsync("/api/task", taskDto);
             var result = await response.Content.ReadFromJsonAsync<ResultDto<TaskReturnDto>>();
             return result?.Data?.Id;
         }
@@ -43,7 +43,7 @@ namespace TaskTracker.Tests.Integration
             await CreateTaskViaEndpointAsync();
 
             // Act
-            var response = await _client.GetAsync("/api/tasks");
+            var response = await _client.GetAsync("/api/task");
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -61,7 +61,7 @@ namespace TaskTracker.Tests.Integration
             await CreateTaskViaEndpointAsync();
 
             // Act
-            var response = await _client.GetAsync("/api/tasks/filter?field=title&value=Test");
+            var response = await _client.GetAsync("/api/task/filter?field=title&value=Test");
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -82,7 +82,7 @@ namespace TaskTracker.Tests.Integration
             await AuthenticateAsync();
 
             // Act
-            var response = await _client.GetAsync("/api/tasks/filter?field=test&value=Test");
+            var response = await _client.GetAsync("/api/task/filter?field=test&value=Test");
 
             // Assert
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -100,7 +100,7 @@ namespace TaskTracker.Tests.Integration
             var taskId = await CreateTaskViaEndpointAsync();
 
             // Act
-            var response = await _client.GetAsync($"/api/tasks/{taskId}");
+            var response = await _client.GetAsync($"/api/task/{taskId}");
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -117,7 +117,7 @@ namespace TaskTracker.Tests.Integration
             await AuthenticateAsync();
 
             // Act
-            var response = await _client.GetAsync($"/api/tasks/{Guid.NewGuid()}");
+            var response = await _client.GetAsync($"/api/task/{Guid.NewGuid()}");
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -137,7 +137,7 @@ namespace TaskTracker.Tests.Integration
             await CreateTaskViaEndpointAsync();
 
             // Act
-            var response = await _client.GetAsync($"/api/tasks/{taskId}");
+            var response = await _client.GetAsync($"/api/task/{taskId}");
 
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -155,7 +155,7 @@ namespace TaskTracker.Tests.Integration
             var taskDto = new TaskRequestDto { Title = "Other Test Task", Description = "Other Test Description" };
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/tasks", taskDto);
+            var response = await _client.PostAsJsonAsync("/api/task", taskDto);
 
             // Assert
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -176,7 +176,7 @@ namespace TaskTracker.Tests.Integration
             var updateDto = new TaskRequestDto { Title = "New title", Description = "New description", Status = EnumTaskStatus.Completed };
 
             // Act
-            var response = await _client.PutAsJsonAsync($"/api/tasks/{taskId}", updateDto);
+            var response = await _client.PutAsJsonAsync($"/api/task/{taskId}", updateDto);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -196,7 +196,7 @@ namespace TaskTracker.Tests.Integration
             var updateDto = new TaskRequestDto { Title = "Updated Title" };
 
             // Act
-            var response = await _client.PutAsJsonAsync($"/api/tasks/{Guid.NewGuid()}", updateDto);
+            var response = await _client.PutAsJsonAsync($"/api/task/{Guid.NewGuid()}", updateDto);
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -217,7 +217,7 @@ namespace TaskTracker.Tests.Integration
             var updateDto = new TaskRequestDto { Title = "Updated Title" };
 
             // Act
-            var response = await _client.PutAsJsonAsync($"/api/tasks/{taskId}", updateDto);
+            var response = await _client.PutAsJsonAsync($"/api/task/{taskId}", updateDto);
 
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -235,7 +235,7 @@ namespace TaskTracker.Tests.Integration
             var taskId = await CreateTaskViaEndpointAsync();
 
             // Act
-            var response = await _client.DeleteAsync($"/api/tasks/{taskId}");
+            var response = await _client.DeleteAsync($"/api/task/{taskId}");
 
             // Assert
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -251,7 +251,7 @@ namespace TaskTracker.Tests.Integration
             await AuthenticateAsync();
 
             // Act
-            var response = await _client.DeleteAsync($"/api/tasks/{Guid.NewGuid()}");
+            var response = await _client.DeleteAsync($"/api/task/{Guid.NewGuid()}");
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -271,7 +271,7 @@ namespace TaskTracker.Tests.Integration
             await CreateTaskViaEndpointAsync();
 
             // Act
-            var response = await _client.DeleteAsync($"/api/tasks/{taskId}");
+            var response = await _client.DeleteAsync($"/api/task/{taskId}");
 
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

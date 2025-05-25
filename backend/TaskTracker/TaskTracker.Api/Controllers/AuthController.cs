@@ -6,7 +6,7 @@ using TaskTracker.Application.Interfaces;
 namespace TaskTracker.Api.Controllers
 {
     [ApiController]
-    [Route("api/auth")]
+    [Route("api/[controller]")]
     [AllowAnonymous]
     public class AuthController(IAuthService authService) : ControllerBase
     {
