@@ -105,15 +105,14 @@ namespace TaskTracker.Infrastructure.Services
                 await _context.Tasks.AddAsync(task);
                 await _context.SaveChangesAsync();
 
-                var evt = new TaskCreatedOrUpdatedEventDto
+                var evt = new TaskCreateEventDto
                 { 
                     TaskId = task.Id,
                     UserId = userId,
                     Title = task.Title,
                     Description = task.Description,
-                    Status = task.Status,
                 };
-                await _publisher.Publish(evt, ctx => ctx.SetRoutingKey("task.created"));
+                await _publisher.Publish(evt);
 
                 return ResultDto<TaskReturnDto>.Success(_mapper.Map<TaskReturnDto>(task), HttpStatusCode.Created);
             }
@@ -146,6 +145,16 @@ namespace TaskTracker.Infrastructure.Services
 
                 await _context.SaveChangesAsync();
 
+                var evt = new TaskUpdateEventDto
+                {
+                    TaskId = task.Id,
+                    UserId = userId,
+                    Title = task.Title,
+                    Description = task.Description,
+                    Status = task.Status
+                };
+                await _publisher.Publish(evt);
+
                 return ResultDto<TaskReturnDto>.Success(_mapper.Map<TaskReturnDto>(task), HttpStatusCode.OK);
             }
             catch (Exception ex)
@@ -172,6 +181,13 @@ namespace TaskTracker.Infrastructure.Services
 
                 _context.Tasks.Remove(task);
                 await _context.SaveChangesAsync();
+
+                var evt = new TaskDeleteEventDto
+                {
+                    TaskId = task.Id,
+                    UserId = userId,
+                };
+                await _publisher.Publish(evt);
 
                 return ResultDto<bool>.Success(true, HttpStatusCode.NoContent);
             }

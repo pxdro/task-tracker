@@ -3,13 +3,13 @@ using TaskTracker.Application.DTOs;
 
 namespace TaskTracker.Infrastructure.Consumers
 {
-    public class TaskCreatedOrUpdatedConsumer : IConsumer<TaskCreatedOrUpdatedEventDto>
+    public class TaskUpdateEventConsumer : IConsumer<TaskUpdateEventDto>
     {
-        public async Task Consume(ConsumeContext<TaskCreatedOrUpdatedEventDto> context)
+        public async Task Consume(ConsumeContext<TaskUpdateEventDto> context)
         {
             var m = context.Message;
-            string logMessage = $"[🐰 TaskCreatedOrUpdated Consumer] Event received at {DateTime.UtcNow:O}: " +
-                               $"TaskId={m.TaskId}, UserId={m.UserId}, Status={m.Status}, Title={m.Title}";
+            string logMessage = $"[🐰 TaskUpdateEvent Consumer] Event received at {DateTime.UtcNow:O}: " +
+                               $"TaskId={m.TaskId}, UserId={m.UserId}, Title={m.Title}, Description={m.Description}, Status={m.Status}";
 
             string logDirectory = "logs";
             string logFilePath = Path.Combine(logDirectory, "taskcreatedorupdated_events_log.txt");
@@ -22,7 +22,7 @@ namespace TaskTracker.Infrastructure.Consumers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erro ao escrever no arquivo de log: {ex.Message}");
+                Console.WriteLine($"Error registering event in log file: {ex.Message}");
                 throw;
             }
         }

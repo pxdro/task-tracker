@@ -1,1 +1,7 @@
 [🐰 TaskCreatedOrUpdated Consumer] Event received at 2025-05-25T22:53:17.6505261Z: TaskId=29087b16-52dc-4d47-a637-b40f8e8e1e99, UserId=678ed04b-e226-44b2-9fc4-5a2ebfeef361, Status=Active, Title=Smoke Test
+[🐰 TaskCreatedOrUpdated Consumer] Event received at 2025-05-25T23:10:01.9559998Z: TaskId=08ee8000-c7d1-4d85-802e-5d6ef9763331, UserId=678ed04b-e226-44b2-9fc4-5a2ebfeef361, Status=Active, Title=Smoke Test
+[🐰 TaskEventDto Consumer] Event received at 2025-05-25T23:40:55.4432444Z: TaskId=abfb0639-8ee2-49e5-b248-960c11930a03, UserId=678ed04b-e226-44b2-9fc4-5a2ebfeef361, Status=Active, Title=Smoke Test
+[🐰 TaskEventDto Consumer] Event received at 2025-05-25T23:46:32.9362570Z: TaskId=070870aa-c810-4969-9545-90f1386848ec, UserId=678ed04b-e226-44b2-9fc4-5a2ebfeef361, Status=Active, Title=Smoke Test
+[🐰 TaskCreateEvent Consumer] Event received at 2025-05-26T14:30:53.6555577Z: TaskId=bd16470a-ec54-4996-b503-83021780dcca, UserId=678ed04b-e226-44b2-9fc4-5a2ebfeef361, Title=Smoke Test, Description=RabbitMQ publish test
+[🐰 TaskUpdateEvent Consumer] Event received at 2025-05-26T14:31:59.1764090Z: TaskId=bd16470a-ec54-4996-b503-83021780dcca, UserId=678ed04b-e226-44b2-9fc4-5a2ebfeef361, Title=Smoke Test 2, Description=RabbitMQ publish test 2, Status=Completed
+[🐰 TaskDeleteEvent Consumer] Event received at 2025-05-26T14:32:23.0242126Z: TaskId=bd16470a-ec54-4996-b503-83021780dcca, UserId=678ed04b-e226-44b2-9fc4-5a2ebfeef361

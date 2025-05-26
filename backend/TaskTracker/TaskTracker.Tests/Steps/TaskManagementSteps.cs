@@ -39,21 +39,21 @@ namespace TaskTracker.Tests.Steps
                     Description = row["description"],
                     Status = row["status"]
                 };
-                await _client.PostAsJsonAsync("/api/tasks", dto);
+                await _client.PostAsJsonAsync("/api/task", dto);
             }
         }
 
         [When(@"I request my task list")]
         public async Task WhenIRequestMyTaskList()
         {
-            var response = await _client.GetAsync("/api/tasks");
+            var response = await _client.GetAsync("/api/task");
             _ctx["response"] = response;
         }
 
         [When(@"I filter my tasks by ""(.*)"" with ""(.*)""")]
         public async Task WhenIFilterMyTasksByWith(string field, string value)
         {
-            var response = await _client.GetAsync($"/api/tasks/filter?field={field}&value={value}");
+            var response = await _client.GetAsync($"/api/task/filter?field={field}&value={value}");
             _ctx["response"] = response;
         }
 
@@ -67,7 +67,7 @@ namespace TaskTracker.Tests.Steps
             var task = preContent?.Data?.FirstOrDefault();
             Assert.NotNull(task);
 
-            var response = await _client.GetAsync($"/api/tasks/{task.Id}");
+            var response = await _client.GetAsync($"/api/task/{task.Id}");
             _ctx["response"] = response;
         }
 
@@ -75,7 +75,7 @@ namespace TaskTracker.Tests.Steps
         public async Task WhenICreateATaskWithTitleAndDescription(string title, string description)
         {
             var dto = new { Title = title, Description = description };
-            var response = await _client.PostAsJsonAsync("/api/tasks", dto);
+            var response = await _client.PostAsJsonAsync("/api/task", dto);
             _ctx["response"] = response;
         }
 
@@ -90,7 +90,7 @@ namespace TaskTracker.Tests.Steps
             Assert.NotNull(task);
 
             var dto = new { Title = title, Description = description, Status = status };
-            var response = await _client.PutAsJsonAsync($"/api/tasks/{task.Id}", dto);
+            var response = await _client.PutAsJsonAsync($"/api/task/{task.Id}", dto);
             _ctx["response"] = response;
         }
 
@@ -104,7 +104,7 @@ namespace TaskTracker.Tests.Steps
             var task = preContent?.Data?.FirstOrDefault();
             Assert.NotNull(task);
 
-            var response = await _client.DeleteAsync($"/api/tasks/{task.Id}");
+            var response = await _client.DeleteAsync($"/api/task/{task.Id}");
             _ctx["response"] = response;
         }
 

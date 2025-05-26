@@ -2,7 +2,7 @@
 
 namespace TaskTracker.Application.DTOs
 {
-    public class TaskCreatedOrUpdatedEventDto
+    public class TaskUpdateEventDto
     {
         public Guid TaskId { get; init; }
         public Guid UserId { get; init; }

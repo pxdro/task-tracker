@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using TaskTracker.Application.DTOs;
 using TaskTracker.Application.Interfaces;
 using TaskTracker.Application.Profiles;
 using TaskTracker.Infrastructure.Consumers;
@@ -17,7 +18,7 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 
-// Add context to the container only if not Testing Env
+// Add context to the container only if not Testing Env (InMemory DB)
 builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
 {
     if (builder.Environment.IsEnvironment("Testing"))
@@ -29,7 +30,6 @@ builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
 // Add JWT Auth settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var key = Encoding.UTF8.GetBytes(jwtSettings["AuthKey"]!);
-
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -45,33 +45,63 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Add MassTransit and RabbitMQ settings
 var rabbitMqSettings = builder.Configuration.GetSection("RabbitMq");
-var rabbitMqHost = rabbitMqSettings["Host"];
-var rabbitMqUser = rabbitMqSettings["User"];
-var rabbitMqPassword = rabbitMqSettings["Password"];
-if (rabbitMqHost != null && rabbitMqUser != null && rabbitMqPassword != null)
+builder.Services.AddMassTransit(x =>
 {
-    builder.Services.AddMassTransit(x =>
-    {
-        // Consumer registration
-        x.AddConsumer<TaskCreatedOrUpdatedConsumer>();
+    x.AddConsumer<TaskCreateEventConsumer>();
+    x.AddConsumer<TaskUpdateEventConsumer>();
+    x.AddConsumer<TaskDeleteEventConsumer>();
 
-        // Bus registration
+    // For Testing env, use InMemory transport
+    if (builder.Environment.IsEnvironment("Testing"))
+    {
+        x.UsingInMemory((context, cfg) =>
+        {
+            cfg.ReceiveEndpoint("task-create-log-events", e =>
+                e.ConfigureConsumer<TaskCreateEventConsumer>(context));
+            cfg.ReceiveEndpoint("task-update-log-events", e =>
+                e.ConfigureConsumer<TaskUpdateEventConsumer>(context));
+            cfg.ReceiveEndpoint("task-delete-log-events", e =>
+                e.ConfigureConsumer<TaskDeleteEventConsumer>(context));
+        });
+    }
+    // For Normal envs, use RabbitMQ transport
+    else
+    {
         x.UsingRabbitMq((context, cfg) =>
         {
-            cfg.Host(rabbitMqHost, h =>
+            cfg.Host(rabbitMqSettings["Host"], h =>
             {
-                h.Username(rabbitMqUser);
-                h.Password(rabbitMqPassword);
+                h.Username(rabbitMqSettings["User"]);
+                h.Password(rabbitMqSettings["Password"]);
             });
 
-            // Queue creation attached to consumer
-            cfg.ReceiveEndpoint("task-tracker-task-events", e =>
+            // exchanges fanout
+            cfg.Message<TaskCreateEventDto>(m => m.SetEntityName("task.create"));
+            cfg.Publish<TaskCreateEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+            cfg.Message<TaskUpdateEventDto>(m => m.SetEntityName("task.update"));
+            cfg.Publish<TaskUpdateEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+            cfg.Message<TaskDeleteEventDto>(m => m.SetEntityName("task.delete"));
+            cfg.Publish<TaskDeleteEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+
+            // filas ligadas aos exchanges
+            cfg.ReceiveEndpoint("task-create-log-events", e =>
             {
-                e.ConfigureConsumer<TaskCreatedOrUpdatedConsumer>(context);
+                e.Bind("task.create", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                e.ConfigureConsumer<TaskCreateEventConsumer>(context);
+            });
+            cfg.ReceiveEndpoint("task-update-log-events", e =>
+            {
+                e.Bind("task.update", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                e.ConfigureConsumer<TaskUpdateEventConsumer>(context);
+            });
+            cfg.ReceiveEndpoint("task-delete-log-events", e =>
+            {
+                e.Bind("task.delete", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                e.ConfigureConsumer<TaskDeleteEventConsumer>(context);
             });
         });
-    });
-}
+    }
+});
 
 // Add services to the container.
 builder.Services.AddAuthorization();                    // Auth

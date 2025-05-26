@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using System.Net;
@@ -14,6 +15,7 @@ namespace TaskTracker.Tests.Domain
     {
         private readonly TaskTrackerDbContext _dbContext;
         private readonly Mock<IMapper> _mapperMock = new();
+        private readonly Mock<IPublishEndpoint> _publisherMock;
         private readonly TaskService _taskService;
 
         public TaskServiceTests()
@@ -53,7 +55,16 @@ namespace TaskTracker.Tests.Domain
                     Description = source.Description,
                 });
 
-            _taskService = new TaskService(_dbContext, _mapperMock.Object);
+            // Configs for MassTransit
+            _publisherMock = new Mock<IPublishEndpoint>();
+            _publisherMock
+                .Setup(x => x.Publish(
+                    It.IsAny<object>(),
+                    It.IsAny<CancellationToken>()
+                ))
+                .Returns(Task.CompletedTask);
+
+            _taskService = new TaskService(_dbContext, _mapperMock.Object, _publisherMock.Object);
         }
 
         [Fact]
@@ -335,7 +346,7 @@ namespace TaskTracker.Tests.Domain
                     .Options);
             invalidDbContext.Dispose(); // Force database error
 
-            var service = new TaskService(invalidDbContext, _mapperMock.Object);
+            var service = new TaskService(invalidDbContext, _mapperMock.Object, _publisherMock.Object);
 
             // Act
             var result = await service.GetAllTasksAsync(Guid.NewGuid());
