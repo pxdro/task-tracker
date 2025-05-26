@@ -126,7 +126,7 @@ namespace TaskTracker.Infrastructure.Services
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                     new Claim(ClaimTypes.Email, user.Email),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    user.Email == "admin@email.com" ? new Claim(ClaimTypes.Role, "Admin") : new Claim(ClaimTypes.Role, "User")
+                    user.Email == "admin@email.com" ? new Claim(ClaimTypes.Role, "Admin") : new Claim(ClaimTypes.Role, "User") // Simuate role for admin user
                 ]),
                 Expires = DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["AuthTokenExpirationMinutes"]!)),
                 Issuer = jwtSettings["Issuer"],

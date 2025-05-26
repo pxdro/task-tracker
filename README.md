@@ -1,11 +1,11 @@
 # Task Tracker
 
-Aplicação full-stack de gerenciamento de tarefas com .NET, Angular, CI/CD, containers, RabbitMQ e ELK Stack.
+Full-stack app to manage tasks using .NET, Angular, RabbitMQ, containers, CI/CD and ELK Stash.
 
-## Estrutura do Repositório
-- `backend/` — API e projetos .NET  
-- `frontend/` — Projeto Angular  
-- `docs/` — Especificações BDD, diagramas e notas  
+## Repositorie structure
+- `backend/`   .NET API
+- `frontend/`   Angular 
+- `docs/`   Diagrams and relevant notes  
 
-## Tecnologias
+## Techs
 .NET Core, Angular, Docker, RabbitMQ, ELK, Jenkins, GCP/Azure, xUnit, SpecFlow
