@@ -1,6 +1,6 @@
 # Task Tracker
 
-Full-stack app to manage tasks using .NET, Angular, RabbitMQ, containers, CI/CD and ELK Stash.
+Full-stack app to manage tasks using .NET, Angular, DDD, Clean Architecture, Microservices, Containers, RabbitMQ, ElasticSearch, Kibana, Jenkins.
 
 ## Repositorie structure
 - `backend/`   .NET API

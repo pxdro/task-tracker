@@ -14,6 +14,7 @@ using TaskTracker.Infrastructure.Services;
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
 
 // Capture startup logs before build
+Serilog.Debugging.SelfLog.Enable(msg => Console.Error.WriteLine($"[Serilog SelfLog] {msg}"));
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Enrich.WithMachineName()
@@ -35,11 +36,9 @@ try
            .AddEnvironmentVariables();
 
     // Configure Serilog
-    Serilog.Debugging.SelfLog.Enable(msg => Console.Error.WriteLine($"[Serilog SelfLog] {msg}"));
     builder.Host.UseSerilog((ctx, lc) =>
     {
-        var serilogSection = ctx.Configuration.GetSection("Serilog");
-        lc.ReadFrom.Configuration(serilogSection)
+        lc.ReadFrom.Configuration(ctx.Configuration)
           .Enrich.FromLogContext()
           .Enrich.WithMachineName()
           .Enrich.WithEnvironmentName();
@@ -131,7 +130,7 @@ try
     builder.Services.AddEndpointsApiExplorer();             // API Explorer for Swagger
     builder.Services.AddSwaggerGen();                       // Swagger
     builder.Services.AddAutoMapper(typeof(MapperProfile));  // AutoMapper
-    
+
     // Services
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
@@ -161,6 +160,7 @@ try
         db.Database.Migrate();
     }
 
+    Log.Information("TaskTracker startup finished");
     app.Run();
 }
 catch (Exception ex)
@@ -169,7 +169,6 @@ catch (Exception ex)
 }
 finally
 {
-    Log.Information("TaskTracker startup finished");
     Log.CloseAndFlush();
 }
 
