@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using System.Text;
 using TaskTracker.Application.DTOs;
 using TaskTracker.Application.Interfaces;
@@ -10,126 +11,167 @@ using TaskTracker.Infrastructure.Consumers;
 using TaskTracker.Infrastructure.Context;
 using TaskTracker.Infrastructure.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
 
-// Load environment variables
-builder.Configuration
-    .AddJsonFile("appsettings.json")
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddEnvironmentVariables();
+// Capture startup logs before build
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithEnvironmentName()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-// Add context to the container only if not Testing Env (InMemory DB)
-builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
+try
 {
-    if (builder.Environment.IsEnvironment("Testing"))
-        options.UseInMemoryDatabase("TestDb");
-    else
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-});
-        
-// Add JWT Auth settings
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var key = Encoding.UTF8.GetBytes(jwtSettings["AuthKey"]!);
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    Log.Information("Starting TaskTracker in {Environment}", environment);
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Load appsettings based on the environment
+    builder.Configuration
+           .SetBasePath(builder.Environment.ContentRootPath)
+           .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+           .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
+           .AddEnvironmentVariables();
+
+    // Configure Serilog
+    Serilog.Debugging.SelfLog.Enable(msg => Console.Error.WriteLine($"[Serilog SelfLog] {msg}"));
+    builder.Host.UseSerilog((ctx, lc) =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings["Issuer"],
-            ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            ClockSkew = TimeSpan.Zero,
-        };
+        var serilogSection = ctx.Configuration.GetSection("Serilog");
+        lc.ReadFrom.Configuration(serilogSection)
+          .Enrich.FromLogContext()
+          .Enrich.WithMachineName()
+          .Enrich.WithEnvironmentName();
     });
 
-// Add MassTransit and RabbitMQ settings
-var rabbitMqSettings = builder.Configuration.GetSection("RabbitMq");
-builder.Services.AddMassTransit(x =>
-{
-    x.AddConsumer<TaskCreateEventConsumer>();
-    x.AddConsumer<TaskUpdateEventConsumer>();
-    x.AddConsumer<TaskDeleteEventConsumer>();
-
-    // For Testing env, use InMemory transport
-    if (builder.Environment.IsEnvironment("Testing"))
+    // Configure DbContext
+    builder.Services.AddDbContext<TaskTrackerDbContext>(options =>
     {
-        x.UsingInMemory((context, cfg) =>
+        if (environment == "Testing")
+            options.UseInMemoryDatabase("TestDb");
+        else
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+                sql => sql.EnableRetryOnFailure());
+    });
+
+    // Configure JWT Auth
+    var jwt = builder.Configuration.GetSection("JwtSettings");
+    var key = Encoding.UTF8.GetBytes(jwt["AuthKey"]!);
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(opt =>
         {
-            cfg.ReceiveEndpoint("task-create-log-events", e =>
-                e.ConfigureConsumer<TaskCreateEventConsumer>(context));
-            cfg.ReceiveEndpoint("task-update-log-events", e =>
-                e.ConfigureConsumer<TaskUpdateEventConsumer>(context));
-            cfg.ReceiveEndpoint("task-delete-log-events", e =>
-                e.ConfigureConsumer<TaskDeleteEventConsumer>(context));
+            opt.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidIssuer = jwt["Issuer"],
+                ValidAudience = jwt["Audience"],
+                ClockSkew = TimeSpan.Zero
+            };
         });
-    }
-    // For Normal envs, use RabbitMQ transport
-    else
+
+    // Configure MassTransit + RabbitMQ
+    var rabbit = builder.Configuration.GetSection("RabbitMq");
+    builder.Services.AddMassTransit(x =>
     {
-        x.UsingRabbitMq((context, cfg) =>
+        x.AddConsumer<TaskCreateEventConsumer>();
+        x.AddConsumer<TaskUpdateEventConsumer>();
+        x.AddConsumer<TaskDeleteEventConsumer>();
+
+        if (environment == "Testing")
         {
-            cfg.Host(rabbitMqSettings["Host"], h =>
-            {
-                h.Username(rabbitMqSettings["User"]);
-                h.Password(rabbitMqSettings["Password"]);
+            x.UsingInMemory((ctx, cfg) => {
+                cfg.ReceiveEndpoint("task-create-log-events", e =>
+                    e.ConfigureConsumer<TaskCreateEventConsumer>(ctx));
+                cfg.ReceiveEndpoint("task-update-log-events", e =>
+                    e.ConfigureConsumer<TaskUpdateEventConsumer>(ctx));
+                cfg.ReceiveEndpoint("task-delete-log-events", e =>
+                    e.ConfigureConsumer<TaskDeleteEventConsumer>(ctx));
             });
+        }
+        else
+        {
+            x.UsingRabbitMq((ctx, cfg) =>
+            {
+                cfg.Host(rabbit["Host"]!, h =>
+                {
+                    h.Username(rabbit["User"]!);
+                    h.Password(rabbit["Password"]!);
+                });
 
-            // exchanges fanout
-            cfg.Message<TaskCreateEventDto>(m => m.SetEntityName("task.create"));
-            cfg.Publish<TaskCreateEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
-            cfg.Message<TaskUpdateEventDto>(m => m.SetEntityName("task.update"));
-            cfg.Publish<TaskUpdateEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
-            cfg.Message<TaskDeleteEventDto>(m => m.SetEntityName("task.delete"));
-            cfg.Publish<TaskDeleteEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                cfg.Message<TaskCreateEventDto>(m => m.SetEntityName("task.create"));
+                cfg.Publish<TaskCreateEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                cfg.Message<TaskUpdateEventDto>(m => m.SetEntityName("task.update"));
+                cfg.Publish<TaskUpdateEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                cfg.Message<TaskDeleteEventDto>(m => m.SetEntityName("task.delete"));
+                cfg.Publish<TaskDeleteEventDto>(p => p.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
 
-            // filas ligadas aos exchanges
-            cfg.ReceiveEndpoint("task-create-log-events", e =>
-            {
-                e.Bind("task.create", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
-                e.ConfigureConsumer<TaskCreateEventConsumer>(context);
+                cfg.ReceiveEndpoint("task-create-log-events", e =>
+                {
+                    e.Bind("task.create", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                    e.ConfigureConsumer<TaskCreateEventConsumer>(ctx);
+                });
+                cfg.ReceiveEndpoint("task-update-log-events", e =>
+                {
+                    e.Bind("task.update", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                    e.ConfigureConsumer<TaskUpdateEventConsumer>(ctx);
+                });
+                cfg.ReceiveEndpoint("task-delete-log-events", e =>
+                {
+                    e.Bind("task.delete", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
+                    e.ConfigureConsumer<TaskDeleteEventConsumer>(ctx);
+                });
             });
-            cfg.ReceiveEndpoint("task-update-log-events", e =>
-            {
-                e.Bind("task.update", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
-                e.ConfigureConsumer<TaskUpdateEventConsumer>(context);
-            });
-            cfg.ReceiveEndpoint("task-delete-log-events", e =>
-            {
-                e.Bind("task.delete", b => b.ExchangeType = RabbitMQ.Client.ExchangeType.Fanout);
-                e.ConfigureConsumer<TaskDeleteEventConsumer>(context);
-            });
-        });
+        }
+    });
+
+    builder.Services.AddAuthorization();                    // Auth
+    builder.Services.AddControllers();                      // Controllers
+    builder.Services.AddEndpointsApiExplorer();             // API Explorer for Swagger
+    builder.Services.AddSwaggerGen();                       // Swagger
+    builder.Services.AddAutoMapper(typeof(MapperProfile));  // AutoMapper
+    
+    // Services
+    builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<ITaskService, TaskService>();
+    builder.Services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
+
+    var app = builder.Build();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+        app.UseDeveloperExceptionPage();
     }
-});
 
-// Add services to the container.
-builder.Services.AddAuthorization();                    // Auth
-builder.Services.AddControllers();                      // Controllers
-builder.Services.AddEndpointsApiExplorer();             // Swagger
-builder.Services.AddSwaggerGen();                       // Swagger
-builder.Services.AddAutoMapper(typeof(MapperProfile));  // AutoMapper
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ITaskService, TaskService>();
-builder.Services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
+    app.UseSerilogRequestLogging();
+    app.UseHttpsRedirection();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.MapControllers();
 
-var app = builder.Build();
+    app.MapGet("/api/ping", () => Results.Text("ok"));
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+    // Ensure database is created and migrations are applied
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<TaskTrackerDbContext>();
+        db.Database.Migrate();
+    }
+
+    app.Run();
+}
+catch (Exception ex)
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.Information("TaskTracker startup finished");
+    Log.CloseAndFlush();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.MapGet("/api/ping", () => "ok");
-
-app.Run();
-
+// For WebApplicationFactory tests on xUnit
 public partial class Program { }
