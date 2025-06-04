@@ -1,3 +1,5 @@
+
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { tap, map, catchError } from 'rxjs/operators';
@@ -20,7 +22,7 @@ export class AuthService {
   register(dto: UserRequestDto): Observable<UserReturnDto> {
     return this.http
       .post<HttpResponse<ResultDto<UserReturnDto>>>(
-        `${this.API}/register`,
+        this.API + '/register',
         dto,
         { observe: 'response' }
       )
@@ -39,7 +41,7 @@ export class AuthService {
   login(dto: UserRequestDto): Observable<UserReturnDto> {
     return this.http
       .post<HttpResponse<ResultDto<TokensDto>>>(
-        `${this.API}/login`,
+        this.API + '/login',
         dto,
         { observe: 'response' }
       )
@@ -74,7 +76,7 @@ export class AuthService {
     };
     return this.http
       .post<HttpResponse<ResultDto<TokensDto>>>(
-        `${this.API}/refresh`,
+        this.API + '/refresh',
         payload,
         { observe: 'response' }
       )
