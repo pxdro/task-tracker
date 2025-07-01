@@ -1,0 +1,18 @@
+<mat-toolbar color="primary">
+  <span>Task Tracker</span>
+
+  <span *ngIf="userEmail" class="user-email">{{ userEmail }}</span>
+
+  <button mat-icon-button
+          class="mx-auto"
+          (click)="toggleTheme()"
+          [matTooltip]="themeService.isDarkMode() ? 'Tema Claro' : 'Tema Escuro'">
+    <mat-icon>{{ themeService.isDarkMode() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+  </button>
+
+  <button mat-icon-button
+          (click)="logout()"
+          matTooltip="Sair">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>

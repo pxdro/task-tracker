@@ -27,7 +27,7 @@ export class LoginComponent {
 
     this.authService.login(this.form.getRawValue()).subscribe({
       next: () => this.router.navigate(['/tasks']),
-      error: (err) => alert(err.error.errorMessage || 'Erro no login')
+      error: (err) => alert(err.error.errorMessage || 'Login error')
     });
   }
 }

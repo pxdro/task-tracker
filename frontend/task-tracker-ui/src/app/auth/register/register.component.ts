@@ -27,7 +27,7 @@ export class RegisterComponent {
 
     this.authService.register(this.form.getRawValue()).subscribe({
       next: () => this.router.navigate(['/auth']),
-      error: (err) => alert(err.error.errorMessage || 'Erro no registro')
+      error: (err) => alert(err.error.errorMessage || 'Register error')
     });
   }
 }
